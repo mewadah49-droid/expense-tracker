@@ -99,8 +99,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
         result = categorizer.categorize(
             description=transaction.description,
             merchant=transaction.merchant,
-            amount=float(transaction.amount),
-            user=request.user
+            amount=float(transaction.amount)
+            # No user parameter for no-auth mode
         )
         
         if result:

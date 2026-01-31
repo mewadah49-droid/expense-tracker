@@ -76,8 +76,9 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
         auto_categorize = validated_data.pop('auto_categorize', True)
         validated_data['source'] = 'manual'
         
-        # Explicitly set user to None for no-auth mode
-        validated_data['user'] = None
+        # For production compatibility, use a dummy user ID (assuming user 1 exists)
+        # This is a temporary workaround until proper migrations can be applied
+        validated_data['user_id'] = 1
         
         # If no category and auto_categorize is enabled, use AI
         if not validated_data.get('category') and auto_categorize:
@@ -136,8 +137,8 @@ class BudgetSerializer(serializers.ModelSerializer):
         else:  # yearly
             start_date = now.replace(month=1, day=1)
         
+        # For no-auth mode, don't filter by user
         total = Transaction.objects.filter(
-            user=obj.user,
             category=obj.category,
             transaction_type='expense',
             date__gte=start_date.date()
@@ -152,5 +153,6 @@ class BudgetSerializer(serializers.ModelSerializer):
         return 0
     
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        # For no-auth mode, assign to dummy user
+        validated_data['user_id'] = 1
         return super().create(validated_data)
