@@ -10,6 +10,7 @@ services:
     name: expense-tracker-api
     runtime: python
     plan: free
+    rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     startCommand: gunicorn config.wsgi:application
     envVars:
@@ -34,6 +35,7 @@ services:
   - type: web
     name: expense-tracker-frontend
     runtime: static
+    rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     headers:
