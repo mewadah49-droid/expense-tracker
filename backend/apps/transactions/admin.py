@@ -1,0 +1,24 @@
+from django.contrib import admin
+from .models import Category, Transaction, Budget
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'icon', 'user', 'is_income', 'created_at']
+    list_filter = ['is_income', 'user']
+    search_fields = ['name']
+
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'amount', 'description', 'category', 'transaction_type', 'date', 'source']
+    list_filter = ['transaction_type', 'source', 'ai_categorized', 'date']
+    search_fields = ['description', 'merchant']
+    date_hierarchy = 'date'
+    ordering = ['-date']
+
+
+@admin.register(Budget)
+class BudgetAdmin(admin.ModelAdmin):
+    list_display = ['user', 'category', 'amount', 'period', 'is_active']
+    list_filter = ['period', 'is_active']

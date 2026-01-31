@@ -1,0 +1,43 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
+import Layout from '@/components/Layout'
+import Dashboard from '@/pages/Dashboard'
+import Transactions from '@/pages/Transactions'
+import Receipts from '@/pages/Receipts'
+import Import from '@/pages/Import'
+import Analytics from '@/pages/Analytics'
+import Settings from '@/pages/Settings'
+import Login from '@/pages/Login'
+import Register from '@/pages/Register'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  return <>{children}</>
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<Dashboard />} />
+        <Route path="transactions" element={<Transactions />} />
+        <Route path="receipts" element={<Receipts />} />
+        <Route path="import" element={<Import />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="settings" element={<Settings />} />
+      </Route>
+    </Routes>
+  )
+}
