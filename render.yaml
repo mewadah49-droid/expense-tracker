@@ -48,4 +48,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: ${{ expense-tracker-api.url }}
+        value: ${{expense-tracker-api.url}}
