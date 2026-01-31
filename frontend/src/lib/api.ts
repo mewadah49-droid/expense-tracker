@@ -1,8 +1,14 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 
-// Get the API URL - use current host's IP if accessing from network
+// Get the API URL
 const getApiUrl = () => {
+  // Use VITE_API_URL if set (for production)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  
+  // Fallback for development
   const hostname = window.location.hostname
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
 
@@ -10,7 +16,7 @@ const getApiUrl = () => {
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
     return `${protocol}//${hostname}:8000`
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  return 'http://localhost:8000'
 }
 
 export const api = axios.create({
