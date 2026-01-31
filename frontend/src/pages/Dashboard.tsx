@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -19,6 +20,7 @@ import {
   X,
   Save,
   Settings,
+  RefreshCw,
 } from 'lucide-react'
 
 // Types
@@ -33,6 +35,7 @@ interface DashboardStats {
   total_spent: number
   total_income: number
   monthly_budget: number
+  income_change_percentage?: number
 }
 
 interface BudgetModalProps {
@@ -102,9 +105,7 @@ function TiltCard({ children, className = '', color = 'slate', index = 0 }: Tilt
           className={`absolute -inset-0.5 bg-gradient-to-r ${borderGradient} rounded-3xl opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-500`}
         />
 
-        <div
-          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-white/60 via-transparent to-slate-100/30"
-        />
+        <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-white/60 via-transparent to-slate-100/30" />
 
         <div className="relative h-full p-6" style={{ transform: 'translateZ(40px)' }}>
           {children}
@@ -136,7 +137,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 
 // Loading skeleton
 const PremiumSkeleton = () => (
-  <div className="space-y-8">
+  <div className="space-y-8 px-4 sm:px-6 lg:px-8">
     <div className="h-12 bg-gradient-to-r from-slate-100 to-slate-200 rounded-2xl w-1/3 animate-pulse" />
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
@@ -146,44 +147,80 @@ const PremiumSkeleton = () => (
   </div>
 )
 
-// Clean White Glassmorphism 3D Budget Modal
+// Error component
+const ErrorState = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-4">
+    <div className="p-4 bg-rose-100 rounded-full mb-4">
+      <AlertTriangle className="w-8 h-8 text-rose-600" />
+    </div>
+    <h3 className="text-xl font-semibold text-slate-800 mb-2">Failed to load dashboard</h3>
+    <p className="text-slate-500 mb-4 text-center">Something went wrong while fetching your data.</p>
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onRetry}
+      className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl font-medium"
+    >
+      <RefreshCw className="w-4 h-4" />
+      Try Again
+    </motion.button>
+  </div>
+)
+
+// Check if touch device (SSR-safe)
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false)
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
+
+  return isTouch
+}
+
+// Optimized Budget Modal - 60fps Mobile Performance
 function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
   const [budget, setBudget] = useState(currentBudget > 0 ? currentBudget.toString() : '')
+  const [mounted, setMounted] = useState(false)
   const queryClient = useQueryClient()
-  const modalRef = useRef<HTMLDivElement>(null)
+  const isTouchDevice = useIsTouchDevice()
 
-  // 3D tilt for modal
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const rotateX = useTransform(y, [-0.5, 0.5], ['3deg', '-3deg'])
-  const rotateY = useTransform(x, [-0.5, 0.5], ['-3deg', '3deg'])
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!modalRef.current) return
-    const rect = modalRef.current.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    x.set((event.clientX - centerX) / (rect.width / 2))
-    y.set((event.clientY - centerY) / (rect.height / 2))
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
+    },
+    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2 } },
   }
 
-  const handleMouseLeave = () => {
-    x.set(0)
-    y.set(0)
-  }
+  const updateUser = useAuthStore((state) => state.updateUser)
 
   const updateBudget = useMutation({
     mutationFn: async (amount: number) => {
-      localStorage.setItem('monthly_budget', amount.toString())
-      return { monthly_budget: amount }
+      const response = await api.patch('/api/users/profile/', {
+        monthly_budget: amount,
+      })
+      return response.data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Safely call updateUser if it exists
+      if (typeof updateUser === 'function') {
+        updateUser({ monthlyBudget: data.monthly_budget })
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      toast.success('Budget updated successfully!')
+      toast.success('Budget updated!')
       onSave()
     },
-    onError: () => {
-      toast.error('Failed to update budget')
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update budget')
     },
   })
 
@@ -193,147 +230,93 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
     if (!isNaN(amount) && amount > 0) {
       updateBudget.mutate(amount)
     } else {
-      toast.error('Please enter a valid budget amount')
+      toast.error('Enter a valid amount')
     }
   }
+
+  // Don't render portal on SSR
+  if (!mounted) return null
 
   return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-200/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm"
       onClick={onClose}
+      style={{ willChange: 'opacity' }}
     >
-      {/* Soft ambient background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-slate-100/50 via-white/30 to-gray-100/50 rounded-full blur-3xl" />
-      </div>
-
       <motion.div
-        ref={modalRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        initial={{ opacity: 0, scale: 0.9, y: 40 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 40 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: 'preserve-3d',
-        }}
-        className="relative w-full max-w-md"
+        variants={modalVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className={`relative w-full max-w-md ${!isTouchDevice ? 'hover:scale-[1.01]' : ''} transition-transform`}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+        }}
       >
-        {/* White Glass Card */}
-        <div className="relative bg-white/90 backdrop-blur-2xl rounded-3xl border border-white/80 shadow-2xl shadow-slate-300/50 overflow-hidden">
-          {/* Subtle top gradient line */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-300 via-gray-300 to-slate-300" />
-
-          {/* Inner glow */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-slate-50/30 pointer-events-none" />
-
-          {/* Clean Header */}
-          <div className="relative p-8 border-b border-slate-100">
+        <div className="relative bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="relative p-6 border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center justify-between">
-              <div>
-                <motion.h2
-                  className="text-2xl font-bold text-slate-800 flex items-center gap-3"
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <div className="p-2.5 bg-slate-100 rounded-xl border border-slate-200 shadow-sm">
-                    <Target className="w-6 h-6 text-slate-700" />
-                  </div>
-                  {currentBudget > 0 ? 'Edit Budget' : 'Set Budget'}
-                </motion.h2>
-                <motion.p
-                  className="text-slate-500 mt-2 text-sm font-medium"
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  Manage your monthly spending limit
-                </motion.p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-200 rounded-xl">
+                  <Target className="w-5 h-5 text-slate-700" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">
+                    {currentBudget > 0 ? 'Edit Budget' : 'Set Budget'}
+                  </h2>
+                  <p className="text-slate-500 text-sm">Monthly spending limit</p>
+                </div>
               </div>
 
               <motion.button
-                whileHover={{ rotate: 90, scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
-                className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition-colors shadow-sm"
+                className="p-2 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5 text-slate-600" />
               </motion.button>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="relative p-8 space-y-6">
-            {/* Clean Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 ml-1">
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {/* Input */}
+            <div className="space-y-2">
+              <label htmlFor="budget-input" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-slate-500" />
-                Monthly Budget Amount
+                Amount
               </label>
-              <div className="relative group">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-slate-300 to-gray-300 rounded-2xl opacity-30 group-hover:opacity-60 blur transition duration-500 group-focus-within:opacity-80" />
-                <div className="relative flex items-center bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group-focus-within:border-slate-400 transition-colors">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">₹</span>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-12 pr-4 py-5 bg-transparent text-2xl font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0"
-                  />
-                </div>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">₹</span>
+                <input
+                  id="budget-input"
+                  type="number"
+                  required
+                  step="0.01"
+                  min="0"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xl font-bold text-slate-800 focus:outline-none focus:border-slate-400 transition-colors"
+                  style={{ transform: 'translateZ(0)' }}
+                  autoFocus
+                />
               </div>
             </div>
 
-            {/* Clean Tips Card */}
-            <motion.div
-              className="relative bg-slate-50/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-5"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <Sparkles className="w-5 h-5 text-amber-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-800 mb-2 text-sm">Budgeting Tips</p>
-                  <ul className="space-y-1.5 text-xs text-slate-600">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                      Follow the 50/30/20 rule for needs/wants/savings
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                      Review and adjust based on past 3 months spending
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
-                      Keep 10% buffer for unexpected expenses
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons */}
+            {/* Buttons */}
             <div className="flex gap-3 pt-2">
               <motion.button
                 type="button"
                 onClick={onClose}
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border border-slate-200 transition-all shadow-sm"
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors"
               >
                 Cancel
               </motion.button>
@@ -341,31 +324,27 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
               <motion.button
                 type="submit"
                 disabled={updateBudget.isPending}
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 relative py-3.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-500/25 disabled:opacity-50 overflow-hidden group"
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                <span className="relative flex items-center justify-center gap-2">
-                  {updateBudget.isPending ? (
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                      <Sparkles className="w-5 h-5" />
-                    </motion.div>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Save Budget
-                    </>
-                  )}
-                </span>
+                {updateBudget.isPending ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    style={{ willChange: 'transform' }}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                  </motion.div>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Save
+                  </>
+                )}
               </motion.button>
             </div>
           </form>
         </div>
-
-        {/* Soft shadow layers for 3D effect */}
-        <div className="absolute -inset-4 bg-slate-300/20 rounded-[2rem] blur-2xl -z-10" />
-        <div className="absolute -inset-8 bg-slate-200/20 rounded-[3rem] blur-3xl -z-20" />
       </motion.div>
     </motion.div>,
     document.body
@@ -375,21 +354,23 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
 export default function Dashboard() {
   const [showBudgetModal, setShowBudgetModal] = useState(false)
 
-  const { data: stats, isLoading } = useQuery<DashboardStats>({
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const response = await api.get('/api/analytics/dashboard/')
-      const savedBudget = localStorage.getItem('monthly_budget')
-      return {
-        ...response.data,
-        monthly_budget: savedBudget ? parseFloat(savedBudget) : 0,
-      }
+      return response.data
     },
   })
 
-  const monthlyBudget = stats?.monthly_budget || 0
-  const totalSpent = stats?.total_spent || 0
-  const totalIncome = stats?.total_income || 0
+  const monthlyBudget = stats?.monthly_budget ?? 0
+  const totalSpent = stats?.total_spent ?? 0
+  const totalIncome = stats?.total_income ?? 0
+  const incomeChangePercentage = stats?.income_change_percentage
 
   const remainingBudget = monthlyBudget > 0 ? monthlyBudget - totalSpent : totalIncome - totalSpent
 
@@ -400,17 +381,19 @@ export default function Dashboard() {
   const overspentAmount = Math.abs(remainingBudget)
 
   const getBudgetStatus = () => {
-    if (!hasBudget) return { label: 'No Budget', color: 'slate', icon: '📋' }
-    if (isOverspent) return { label: 'Overspent', color: 'rose', icon: '🚨' }
-    if (budgetPercentage > 90) return { label: 'Critical', color: 'rose', icon: '⚠️' }
-    if (budgetPercentage > 75) return { label: 'Warning', color: 'amber', icon: '⚡' }
-    if (budgetPercentage > 50) return { label: 'On Track', color: 'blue', icon: '📊' }
-    return { label: 'Great', color: 'emerald', icon: '✓' }
+    if (!hasBudget) return { label: 'No Budget', color: 'slate' as const, icon: '📋' }
+    if (isOverspent) return { label: 'Overspent', color: 'rose' as const, icon: '🚨' }
+    if (budgetPercentage > 90) return { label: 'Critical', color: 'rose' as const, icon: '⚠️' }
+    if (budgetPercentage > 75) return { label: 'Warning', color: 'amber' as const, icon: '⚡' }
+    if (budgetPercentage > 50) return { label: 'On Track', color: 'blue' as const, icon: '📊' }
+    return { label: 'Great', color: 'emerald' as const, icon: '✓' }
   }
 
   const budgetStatus = getBudgetStatus()
 
   if (isLoading) return <PremiumSkeleton />
+
+  if (isError) return <ErrorState onRetry={() => refetch()} />
 
   return (
     <motion.div
@@ -435,26 +418,20 @@ export default function Dashboard() {
             <div className="p-2 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl shadow-lg shadow-slate-500/25">
               <Crown className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
-              Dashboard
-            </h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800">Dashboard</h1>
           </motion.div>
           <p className="text-slate-500 text-base md:text-lg">Your financial overview</p>
         </div>
 
-        {/* Clean White Glassmorphism Edit Budget Button */}
+        {/* Edit Budget Button */}
         <motion.button
           whileHover={{ scale: 1.03, y: -2 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => setShowBudgetModal(true)}
           className="group relative px-6 py-3 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-300/50 transition-all duration-300"
         >
-          {/* Subtle gradient overlay on hover */}
           <div className="absolute inset-0 bg-gradient-to-r from-slate-50 via-white to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-          {/* Shine effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-
           <span className="relative flex items-center gap-2.5 font-semibold text-slate-700">
             <div className="p-1.5 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors border border-slate-200">
               <Settings className="w-4 h-4 text-slate-600 group-hover:rotate-90 transition-transform duration-500" />
@@ -464,8 +441,28 @@ export default function Dashboard() {
         </motion.button>
       </motion.div>
 
-      {/* No Budget Warning - Clean Style */}
-
+      {/* No Budget Warning */}
+      {!hasBudget && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+        >
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-amber-800 font-medium">No monthly budget set</p>
+            <p className="text-amber-600 text-sm">Set a budget to track your spending progress</p>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowBudgetModal(true)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium text-sm transition-colors"
+          >
+            Set Budget
+          </motion.button>
+        </motion.div>
+      )}
 
       {/* 3D Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ transformStyle: 'preserve-3d' }}>
@@ -505,10 +502,23 @@ export default function Dashboard() {
             >
               <TrendingUp className="w-7 h-7 text-white" />
             </motion.div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" />
-              +12.5%
-            </span>
+            {incomeChangePercentage !== undefined && (
+              <span
+                className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
+                  incomeChangePercentage >= 0
+                    ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                    : 'text-rose-600 bg-rose-50 border-rose-200'
+                }`}
+              >
+                {incomeChangePercentage >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3" />
+                ) : (
+                  <ArrowDownRight className="w-3 h-3" />
+                )}
+                {incomeChangePercentage >= 0 ? '+' : ''}
+                {incomeChangePercentage.toFixed(1)}%
+              </span>
+            )}
           </div>
           <motion.p
             className="text-2xl md:text-4xl font-bold text-slate-800 mb-1"
@@ -525,7 +535,11 @@ export default function Dashboard() {
         <TiltCard color={isOverspent ? 'rose' : 'slate'} index={2}>
           <div className="flex items-start justify-between mb-4">
             <motion.div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isOverspent ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30' : 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/30'}`}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
+                isOverspent
+                  ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30'
+                  : 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/30'
+              }`}
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
@@ -571,7 +585,19 @@ export default function Dashboard() {
             >
               <Target className="w-7 h-7 text-white" />
             </motion.div>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${budgetStatus.color === 'rose' ? 'text-rose-600 bg-rose-50 border-rose-200' : budgetStatus.color === 'amber' ? 'text-amber-600 bg-amber-50 border-amber-200' : budgetStatus.color === 'emerald' ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : budgetStatus.color === 'blue' ? 'text-blue-600 bg-blue-50 border-blue-200' : 'text-slate-600 bg-slate-50 border-slate-200'}`}>
+            <span
+              className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
+                budgetStatus.color === 'rose'
+                  ? 'text-rose-600 bg-rose-50 border-rose-200'
+                  : budgetStatus.color === 'amber'
+                    ? 'text-amber-600 bg-amber-50 border-amber-200'
+                    : budgetStatus.color === 'emerald'
+                      ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                      : budgetStatus.color === 'blue'
+                        ? 'text-blue-600 bg-blue-50 border-blue-200'
+                        : 'text-slate-600 bg-slate-50 border-slate-200'
+              }`}
+            >
               {budgetStatus.icon} {budgetStatus.label}
             </span>
           </div>
@@ -592,7 +618,15 @@ export default function Dashboard() {
             <>
               <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <motion.div
-                  className={`absolute inset-y-0 left-0 rounded-full ${isOverspent || budgetPercentage > 90 ? 'bg-gradient-to-r from-rose-400 to-rose-600' : budgetPercentage > 75 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : budgetPercentage > 50 ? 'bg-gradient-to-r from-blue-400 to-sky-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}
+                  className={`absolute inset-y-0 left-0 rounded-full ${
+                    isOverspent || budgetPercentage > 90
+                      ? 'bg-gradient-to-r from-rose-400 to-rose-600'
+                      : budgetPercentage > 75
+                        ? 'bg-gradient-to-r from-amber-400 to-orange-500'
+                        : budgetPercentage > 50
+                          ? 'bg-gradient-to-r from-blue-400 to-sky-500'
+                          : 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                  }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                   transition={{ duration: 1.5, ease: 'easeOut' }}
