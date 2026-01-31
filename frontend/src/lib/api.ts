@@ -2,14 +2,19 @@ import axios from 'axios'
 
 // Get the API URL
 const getApiUrl = () => {
+  // Use environment variable if available (set by Render)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+
   // Check if we're in production (not localhost)
   const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-  
+
   if (isProduction) {
-    // Always use the production backend URL
-    return 'https://expense-tracker-api-h99f.onrender.com'
+    // Fallback to the known production backend URL
+    return 'https://expense-tracker-api-db8z.onrender.com'
   }
-  
+
   // Development
   return 'http://localhost:8000'
 }
