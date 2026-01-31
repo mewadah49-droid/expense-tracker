@@ -20,10 +20,14 @@ const getApiUrl = () => {
 }
 
 const apiUrl = getApiUrl()
-console.log('API URL:', apiUrl)
+console.log('-------------------------------------------')
+console.log('Expense Tracker API Config')
+console.log('Environment:', window.location.hostname === 'localhost' ? 'Development (Local)' : 'Production')
+console.log('Active API URL:', apiUrl)
+console.log('-------------------------------------------')
 
 export const api = axios.create({
-  baseURL: getApiUrl(),
+  baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
