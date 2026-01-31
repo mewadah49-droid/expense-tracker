@@ -10,10 +10,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.users.serializers_jwt import EmailTokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-class EmailTokenObtainPairView(TokenObtainPairView):
-    serializer_class = EmailTokenObtainPairSerializer
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
 
 urlpatterns = [
+    path('', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     
     # JWT Authentication with email
