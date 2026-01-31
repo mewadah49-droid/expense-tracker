@@ -5,7 +5,14 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { motion, useSpring, useTransform, useMotionValue, AnimatePresence } from 'framer-motion'
+import { 
+  motion, 
+  useSpring, 
+  useTransform, 
+  useMotionValue, 
+  AnimatePresence,
+  type Variants  // Add this import
+} from 'framer-motion'
 import {
   Wallet,
   TrendingUp,
@@ -178,6 +185,23 @@ function useIsTouchDevice() {
   return isTouch
 }
 
+// Modal animation variants - properly typed
+const modalVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.95, y: 20 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.95, 
+    y: 20, 
+    transition: { duration: 0.2 } 
+  },
+}
+
 // Optimized Budget Modal - 60fps Mobile Performance
 function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
   const [budget, setBudget] = useState(currentBudget > 0 ? currentBudget.toString() : '')
@@ -190,17 +214,6 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
     return () => setMounted(false)
   }, [])
 
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
-    },
-    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2 } },
-  }
-
   const updateUser = useAuthStore((state) => state.updateUser)
 
   const updateBudget = useMutation({
@@ -211,7 +224,6 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
       return response.data
     },
     onSuccess: (data) => {
-      // Safely call updateUser if it exists
       if (typeof updateUser === 'function') {
         updateUser({ monthlyBudget: data.monthly_budget })
       }
@@ -234,7 +246,6 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
     }
   }
 
-  // Don't render portal on SSR
   if (!mounted) return null
 
   return createPortal(
