@@ -11,7 +11,7 @@ services:
     runtime: python
     plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
     startCommand: gunicorn config.wsgi:application
     envVars:
       - key: DATABASE_URL
@@ -25,7 +25,7 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
       - key: CORS_ALLOWED_ORIGINS
-        value: https://expense-tracker-frontend.onrender.com
+        value: ${{ expense-tracker-frontend.url }}
       - key: GEMINI_API_KEY
         sync: false
       - key: PYTHON_VERSION
@@ -48,4 +48,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://expense-tracker-api.onrender.com
+        value: ${{ expense-tracker-api.url }}
