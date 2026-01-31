@@ -9,6 +9,42 @@ from rest_framework.permissions import IsAuthenticated
 from .services.forecasting import BudgetForecastingService
 
 
+class DashboardStatsView(APIView):
+    """Get dashboard statistics."""
+    
+    permission_classes = []  # No authentication required
+    
+    def get(self, request):
+        # Import here to avoid circular imports
+        from apps.transactions.models import Transaction
+        from django.db.models import Sum
+        from django.utils import timezone
+        
+        # Get current month stats (no user filtering)
+        now = timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        monthly_transactions = Transaction.objects.filter(
+            date__gte=month_start
+        )
+        
+        total_spent = monthly_transactions.filter(
+            transaction_type='expense'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        total_income = monthly_transactions.filter(
+            transaction_type='income'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        return Response({
+            'monthly_budget': 0,  # No user-specific budget
+            'total_spent': float(total_spent),
+            'total_income': float(total_income),
+            'remaining_budget': float(total_income) - float(total_spent),  # Simplified
+            'transaction_count': monthly_transactions.count(),
+        })
+
+
 class SpendingForecastView(APIView):
     """Get AI-powered spending forecast."""
     

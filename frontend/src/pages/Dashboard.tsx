@@ -178,7 +178,7 @@ export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const response = await api.get('/api/users/dashboard/')
+      const response = await api.get('/api/analytics/dashboard/')
       return response.data
     },
   })
