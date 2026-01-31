@@ -154,6 +154,10 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Optionally allow all origins (useful for debugging deploy CORS issues).
+# Controlled via environment variable `CORS_ALLOW_ALL_ORIGINS` (default: False)
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() == 'true'
+
 # Security settings for production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
