@@ -2,8 +2,8 @@ import axios from 'axios'
 
 // Get the API URL
 const getApiUrl = () => {
-  // Use environment variable if available (set by Render)
-  if (import.meta.env.VITE_API_URL) {
+  // Use environment variable if available and valid (not a Render placeholder that wasn't substituted)
+  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('${{')) {
     return import.meta.env.VITE_API_URL
   }
 
