@@ -5,7 +5,6 @@ Views for Receipt management with OCR processing.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils import timezone
 
@@ -24,7 +23,7 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
     
     def get_queryset(self):
-        return Receipt.objects.all()  # No user filtering
+        return Receipt.objects.all()
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -55,7 +54,7 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                 receipt.subtotal = result['subtotal']
                 receipt.tax_amount = result['tax_amount']
                 receipt.items = result['items']
-                receipt.ai_confidence = result['confidence']
+                receipt.ai_confidence = result.get('confidence', 0.0)
                 
                 # Parse date
                 if result['receipt_date']:
@@ -76,17 +75,6 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                         unit_price=item_data['price'],
                         total_price=item_data['price'] * item_data.get('quantity', 1)
                     )
-                
-                # Suggest category using AI
-                from apps.transactions.services.ai_categorizer import AICategorizer
-                categorizer = AICategorizer()
-                cat_result = categorizer.categorize(
-                    description=receipt.merchant_name,
-                    merchant=receipt.merchant_name,
-                    amount=float(receipt.total_amount or 0)
-                )
-                if cat_result:
-                    receipt.suggested_category = cat_result['suggested_name']
                 
             else:
                 receipt.status = 'failed'
@@ -136,7 +124,7 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                 name__iexact=receipt.suggested_category
             ).first()
         
-        # Create transaction (no user in no-auth mode)
+        # Create transaction
         transaction = Transaction.objects.create(
             amount=receipt.total_amount,
             description=serializer.validated_data.get(
@@ -150,8 +138,6 @@ class ReceiptViewSet(viewsets.ModelViewSet):
             receipt=receipt,
             date=serializer.validated_data.get('date') or receipt.receipt_date or timezone.now().date(),
             notes=serializer.validated_data.get('notes', ''),
-            ai_categorized=bool(receipt.suggested_category),
-            ai_confidence=receipt.ai_confidence
         )
         
         from apps.transactions.serializers import TransactionSerializer

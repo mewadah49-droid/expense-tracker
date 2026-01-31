@@ -4,14 +4,14 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  User, 
-  CreditCard, 
-  Bell, 
-  Save, 
-  Mail, 
+import {
+  User,
+  CreditCard,
+  Bell,
+  Save,
+  Mail,
   Wallet,
-  Sparkles,
+  Settings as SettingsIcon,
   Shield,
   Palette,
   Check,
@@ -40,7 +40,7 @@ export default function Settings() {
   const updateUser = useAuthStore((state) => state.updateUser)
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('profile')
-  
+
   const [profile, setProfile] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -59,7 +59,6 @@ export default function Settings() {
   })
 
   const [prefs, setPrefs] = useState({
-    ai_categorization_enabled: true,
     auto_budget_alerts: true,
     email_notifications: true,
     weekly_report: true,
@@ -118,7 +117,7 @@ export default function Settings() {
   ]
 
   return (
-    <motion.div 
+    <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -143,7 +142,7 @@ export default function Settings() {
           {[
             { id: 'profile', label: 'Profile', icon: User },
             { id: 'budget', label: 'Budget', icon: Wallet },
-            { id: 'preferences', label: 'Preferences', icon: Sparkles },
+            { id: 'preferences', label: 'Preferences', icon: SettingsIcon },
           ].map((tab) => (
             <motion.button
               key={tab.id}
@@ -271,9 +270,9 @@ export default function Settings() {
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">
-                    {profile.currency === 'INR' ? '₹' : 
-                     profile.currency === 'USD' ? '$' : 
-                     profile.currency === 'EUR' ? '€' : '£'}
+                    {profile.currency === 'INR' ? '₹' :
+                      profile.currency === 'USD' ? '$' :
+                        profile.currency === 'EUR' ? '€' : '£'}
                   </span>
                   <input
                     type="number"
@@ -343,42 +342,6 @@ export default function Settings() {
             exit={{ opacity: 0, x: 20 }}
             className="space-y-6"
           >
-            {/* AI Features */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-pink-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-800">AI Features</h2>
-                  <p className="text-slate-500">Smart automation settings</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <ToggleSetting
-                  icon={Sparkles}
-                  label="AI Auto-Categorization"
-                  description="Let AI automatically categorize your transactions based on description"
-                  checked={prefs.ai_categorization_enabled}
-                  onChange={(checked) => {
-                    setPrefs({ ...prefs, ai_categorization_enabled: checked })
-                    updatePreferences.mutate({ ai_categorization_enabled: checked })
-                  }}
-                  color="amber"
-                />
-
-                <ToggleSetting
-                  icon={TrendingUp}
-                  label="Smart Forecasting"
-                  description="Use AI to predict future spending patterns"
-                  checked={true}
-                  disabled
-                  color="indigo"
-                />
-              </div>
-            </div>
-
             {/* Notifications */}
             <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg">
               <div className="flex items-center gap-4 mb-6">
@@ -491,12 +454,12 @@ function ToggleSetting({
   }
 
   return (
-    <motion.div 
+    <motion.div
       whileHover={{ scale: 1.01 }}
       className={cn(
         'flex items-center justify-between p-5 rounded-2xl border-2 transition-all',
-        checked 
-          ? 'bg-slate-50 border-slate-200' 
+        checked
+          ? 'bg-slate-50 border-slate-200'
           : 'bg-white border-slate-100',
         disabled && 'opacity-60 cursor-not-allowed'
       )}
@@ -516,7 +479,7 @@ function ToggleSetting({
           <p className="text-sm text-slate-500 mt-0.5">{description}</p>
         </div>
       </div>
-      
+
       <button
         onClick={() => !disabled && onChange?.(!checked)}
         disabled={disabled}

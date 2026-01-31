@@ -7,7 +7,6 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   Plus,
   Search,
-  Sparkles,
   X,
   ArrowUpRight,
   ArrowDownRight,
@@ -28,8 +27,6 @@ interface Transaction {
   category: number
   category_name: string
   category_icon: string
-  ai_categorized: boolean
-  ai_confidence: number
   date: string
   source: string
 }
@@ -39,13 +36,13 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const ref = useRef<HTMLDivElement>(null)
-  
+
   const mouseXSpring = useSpring(x, { stiffness: 500, damping: 100 })
   const mouseYSpring = useSpring(y, { stiffness: 500, damping: 100 })
-  
+
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["5deg", "-5deg"])
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-5deg", "5deg"])
-  
+
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
@@ -54,7 +51,7 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
     x.set(xPct)
     y.set(yPct)
   }
-  
+
   const handleMouseLeave = () => {
     x.set(0)
     y.set(0)
@@ -79,20 +76,20 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all')
   const [search, setSearch] = useState('')
-  
+
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['transactions', filter, search],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (filter !== 'all') params.append('transaction_type', filter)
       if (search) params.append('search', search)
-      
+
       const response = await api.get(`/api/transactions/transactions/?${params}`)
       // Handle both array and {results: array} formats
       return Array.isArray(response.data) ? response.data : response.data.results || []
     },
   })
-  
+
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -100,22 +97,17 @@ export default function Transactions() {
       return Array.isArray(response.data) ? response.data : response.data.results || []
     },
   })
-  
+
   const addTransaction = useMutation({
     mutationFn: async (data: any) => {
       const response = await api.post('/api/transactions/transactions/', data)
       return response.data
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       setShowAddModal(false)
-      
-      if (data.ai_categorized) {
-        toast.success(`AI categorized as "${data.category_name}"`, { icon: '🤖' })
-      } else {
-        toast.success('Transaction added!')
-      }
+      toast.success('Transaction added!')
     },
     onError: () => {
       toast.error('Failed to add transaction')
@@ -155,13 +147,13 @@ export default function Transactions() {
   console.log('Transactions:', transactions) // Debug log
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="space-y-8 pb-12 max-w-5xl mx-auto"
     >
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
@@ -177,7 +169,7 @@ export default function Transactions() {
           </div>
           <p className="text-slate-500 text-base md:text-lg">Track every penny with AI precision</p>
         </div>
-        
+
         <button
           onClick={() => setShowAddModal(true)}
           className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
@@ -199,7 +191,7 @@ export default function Transactions() {
             className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
           />
         </div>
-        
+
         <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
           {(['all', 'expense', 'income'] as const).map((type) => (
             <button
@@ -245,23 +237,17 @@ export default function Transactions() {
                     {/* Icon */}
                     <div className={cn(
                       'w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-lg flex-shrink-0',
-                      txn.transaction_type === 'income' 
-                        ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white' 
+                      txn.transaction_type === 'income'
+                        ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white'
                         : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'
                     )}>
                       {txn.category_icon || '📦'}
                     </div>
-                    
+
                     {/* Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <p className="font-bold text-slate-800 text-base md:text-lg truncate">{txn.description}</p>
-                        {txn.ai_categorized && (
-                          <span className="flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold rounded-full">
-                            <Sparkles className="w-3 h-3" />
-                            AI
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-500 flex-wrap">
                         <span className="flex items-center gap-1">
@@ -276,7 +262,7 @@ export default function Transactions() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Amount & Actions Row */}
                   <div className="flex items-center justify-between md:justify-end gap-4 pl-16 md:pl-0">
                     {/* Amount */}
@@ -291,33 +277,33 @@ export default function Transactions() {
                       )}
                       {formatCurrency(txn.amount)}
                     </div>
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setEditingTransaction(txn)
-                      }}
-                      className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (confirm('Are you sure you want to delete this transaction?')) {
-                          deleteTransaction.mutate(txn.id)
-                        }
-                      }}
-                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
-                  </div>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingTransaction(txn)
+                        }}
+                        className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm('Are you sure you want to delete this transaction?')) {
+                            deleteTransaction.mutate(txn.id)
+                          }
+                        }}
+                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </motion.button>
+                    </div>
                   </div>
                 </motion.div>
               </TiltCard>
@@ -369,7 +355,7 @@ function TransactionModal({
   isLoading: boolean
 }) {
   const isEditMode = !!transaction
-  
+
   const [formData, setFormData] = useState({
     description: transaction?.description || '',
     amount: transaction?.amount?.toString() || '',

@@ -14,12 +14,6 @@ class Category(models.Model):
     
     is_income = models.BooleanField(default=False)
     
-    # AI-related fields
-    keywords = models.JSONField(
-        default=list,
-        help_text="Keywords that help AI categorize transactions"
-    )
-    
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -41,7 +35,6 @@ class Transaction(models.Model):
     
     SOURCE_TYPES = [
         ('manual', 'Manual Entry'),
-        ('plaid', 'Bank Sync (Plaid)'),
         ('receipt', 'Receipt Scan'),
     ]
     
@@ -63,14 +56,8 @@ class Transaction(models.Model):
         related_name='transactions'
     )
     
-    # AI Categorization
-    ai_categorized = models.BooleanField(default=False)
-    ai_confidence = models.FloatField(default=0.0, help_text="AI confidence score 0-1")
-    ai_suggested_category = models.CharField(max_length=100, blank=True)
-    
     # Source tracking
     source = models.CharField(max_length=20, choices=SOURCE_TYPES, default='manual')
-    plaid_transaction_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
     receipt = models.ForeignKey(
         'receipts.Receipt',
         on_delete=models.SET_NULL,

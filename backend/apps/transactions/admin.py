@@ -12,7 +12,7 @@ class CategoryAdmin(admin.ModelAdmin):
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ['amount', 'description', 'category', 'transaction_type', 'date', 'source']
-    list_filter = ['transaction_type', 'source', 'ai_categorized', 'date']
+    list_filter = ['transaction_type', 'source', 'date']
     search_fields = ['description', 'merchant']
     date_hierarchy = 'date'
     ordering = ['-date']

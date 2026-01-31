@@ -10,11 +10,10 @@ from datetime import datetime
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
+from django.db.models import Sum, Count
+from django.http import HttpResponse
 
 from .models import Category, Transaction, Budget
 from .serializers import (
@@ -30,16 +29,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = []  # No authentication required
     
     def get_queryset(self):
-        # Return all categories (no user filtering)
         return Category.objects.all()
-    
-    def perform_create(self, serializer):
-        # Don't assign user
-        serializer.save()
     
     @action(detail=False, methods=['get'])
     def defaults(self, request):
-        """Get all categories (no user filtering in no-auth mode)."""
+        """Get all categories."""
         categories = Category.objects.all()
         serializer = self.get_serializer(categories, many=True)
         return Response(serializer.data)
@@ -50,7 +44,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
     
     permission_classes = []  # No authentication required
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['transaction_type', 'category', 'source', 'ai_categorized']
+    filterset_fields = ['transaction_type', 'category', 'source']
     search_fields = ['description', 'merchant', 'notes']
     ordering_fields = ['date', 'amount', 'created_at']
     ordering = ['-date']
@@ -61,7 +55,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return TransactionSerializer
     
     def get_queryset(self):
-        queryset = Transaction.objects.all()  # No user filtering
+        queryset = Transaction.objects.all()
         
         # Date range filtering
         start_date = self.request.query_params.get('start_date')
@@ -87,49 +81,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
         ).order_by('-total')
         
         return Response(summary)
-    
-    @action(detail=True, methods=['post'])
-    def recategorize(self, request, pk=None):
-        """Re-run AI categorization on a transaction."""
-        transaction = self.get_object()
-        
-        from apps.transactions.services.ai_categorizer import AICategorizer
-        
-        categorizer = AICategorizer()
-        result = categorizer.categorize(
-            description=transaction.description,
-            merchant=transaction.merchant,
-            amount=float(transaction.amount)
-            # No user parameter for no-auth mode
-        )
-        
-        if result:
-            transaction.ai_categorized = True
-            transaction.ai_confidence = result['confidence']
-            transaction.ai_suggested_category = result['suggested_name']
-            
-            if result['category']:
-                transaction.category = result['category']
-            
-            transaction.save()
-            
-            return Response({
-                'success': True,
-                'category': result['suggested_name'],
-                'confidence': result['confidence']
-            })
-        
-        return Response({
-            'success': False,
-            'message': 'Could not categorize transaction'
-        }, status=400)
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser])
     def import_csv(self, request):
         """
         Import transactions from a CSV file.
-        Expected columns: date, description, amount, type (optional)
-        Supports most bank export formats.
+        Expected columns: date, description, amount, type (optional), category (optional)
         """
         if 'file' not in request.FILES:
             return Response({'error': 'No file provided'}, status=400)
@@ -147,10 +104,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
             
             imported = 0
             errors = []
-            
-            # Get AI categorizer
-            from apps.transactions.services.ai_categorizer import AICategorizer
-            categorizer = AICategorizer()
             
             for row_num, row in enumerate(reader, start=2):
                 try:
@@ -190,7 +143,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     # Determine transaction type
                     trans_type = 'expense'
                     if amount > 0:
-                        # Check if there's a separate credit column
                         if 'credit' in row and row['credit'].strip():
                             trans_type = 'income'
                         elif row.get('type', '').lower() in ['credit', 'income', 'deposit']:
@@ -198,16 +150,13 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     
                     amount = abs(amount)
                     
-                    # AI categorize
-                    cat_result = categorizer.categorize(
-                        description=description,
-                        merchant=description.split()[0] if description else '',
-                        amount=float(amount)
-                    )
+                    # Try to match category by name if provided
+                    category = None
+                    category_name = row.get('category', '')
+                    if category_name:
+                        category = Category.objects.filter(name__iexact=category_name).first()
                     
-                    category = cat_result['category'] if cat_result else None
-                    
-                    # Create transaction (no user in no-auth mode)
+                    # Create transaction
                     Transaction.objects.create(
                         date=date,
                         description=description,
@@ -216,9 +165,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
                         transaction_type=trans_type,
                         category=category,
                         source='manual',
-                        ai_categorized=True if category else False,
-                        ai_confidence=cat_result['confidence'] if cat_result else 0.0,
-                        ai_suggested_category=cat_result['suggested_name'] if cat_result else '',
                     )
                     imported += 1
                     
@@ -228,7 +174,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             return Response({
                 'success': True,
                 'imported': imported,
-                'errors': errors[:10],  # Limit error messages
+                'errors': errors[:10],
                 'total_errors': len(errors)
             })
             
@@ -238,9 +184,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
         """Export all transactions as CSV."""
-        import csv
-        from django.http import HttpResponse
-        
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
         

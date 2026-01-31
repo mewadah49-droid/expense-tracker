@@ -16,7 +16,7 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = [
             'id', 'name', 'icon', 'color', 'is_income',
-            'keywords', 'transaction_count', 'total_spent', 'created_at'
+            'transaction_count', 'total_spent', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
     
@@ -40,14 +40,10 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'amount', 'description', 'merchant',
             'transaction_type', 'category', 'category_name', 'category_icon',
-            'ai_categorized', 'ai_confidence', 'ai_suggested_category',
             'source', 'date', 'notes', 'tags',
             'created_at', 'updated_at'
         ]
-        read_only_fields = [
-            'id', 'ai_categorized', 'ai_confidence', 'ai_suggested_category',
-            'source', 'created_at', 'updated_at'
-        ]
+        read_only_fields = ['id', 'source', 'created_at', 'updated_at']
     
     def get_category_name(self, obj):
         return obj.category.name if obj.category else ''
@@ -61,45 +57,17 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating transactions with AI categorization."""
-    
-    auto_categorize = serializers.BooleanField(default=True, write_only=True)
+    """Serializer for creating transactions."""
     
     class Meta:
         model = Transaction
         fields = [
             'amount', 'description', 'merchant', 'transaction_type',
-            'category', 'date', 'notes', 'tags', 'auto_categorize'
+            'category', 'date', 'notes', 'tags'
         ]
     
     def create(self, validated_data):
-        auto_categorize = validated_data.pop('auto_categorize', True)
         validated_data['source'] = 'manual'
-        
-        # If no category and auto_categorize is enabled, use AI
-        if not validated_data.get('category') and auto_categorize:
-            try:
-                from apps.transactions.services.ai_categorizer import AICategorizer
-                
-                categorizer = AICategorizer()
-                result = categorizer.categorize(
-                    description=validated_data['description'],
-                    merchant=validated_data.get('merchant', ''),
-                    amount=float(validated_data['amount'])
-                )
-                
-                if result:
-                    validated_data['category'] = result['category']
-                    validated_data['ai_categorized'] = True
-                    validated_data['ai_confidence'] = result['confidence']
-                    validated_data['ai_suggested_category'] = result['suggested_name']
-            except Exception as e:
-                # Log the error but don't fail the transaction creation
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"AI categorization failed: {e}")
-                # Continue without AI categorization
-        
         return super().create(validated_data)
 
 
@@ -133,7 +101,6 @@ class BudgetSerializer(serializers.ModelSerializer):
         else:  # yearly
             start_date = now.replace(month=1, day=1)
         
-        # For no-auth mode, don't filter by user
         total = Transaction.objects.filter(
             category=obj.category,
             transaction_type='expense',
@@ -147,7 +114,3 @@ class BudgetSerializer(serializers.ModelSerializer):
         if obj.amount > 0:
             return round((spent / float(obj.amount)) * 100, 1)
         return 0
-    
-    def create(self, validated_data):
-        # For no-auth mode, no user assignment needed
-        return super().create(validated_data)
