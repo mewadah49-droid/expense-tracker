@@ -4,9 +4,11 @@ import { useAuthStore } from '@/store/authStore'
 // Get the API URL - use current host's IP if accessing from network
 const getApiUrl = () => {
   const hostname = window.location.hostname
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+
   // If accessing from network IP (not localhost), use that IP for backend
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return `http://${hostname}:8000`
+    return `${protocol}//${hostname}:8000`
   }
   return import.meta.env.VITE_API_URL || 'http://localhost:8000'
 }
