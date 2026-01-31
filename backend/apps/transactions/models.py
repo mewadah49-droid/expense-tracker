@@ -3,7 +3,6 @@ Transaction and Category models for expense tracking.
 """
 
 from django.db import models
-from django.contrib.auth.models import User
 
 
 class Category(models.Model):
@@ -12,14 +11,6 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     icon = models.CharField(max_length=50, default='📦')  # Emoji or icon name
     color = models.CharField(max_length=7, default='#6366f1')  # Hex color
-    
-    # If user is null, it's a default category
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        null=True, blank=True,  # Make optional for no-auth mode
-        related_name='categories'
-    )
     
     is_income = models.BooleanField(default=False)
     
@@ -53,13 +44,6 @@ class Transaction(models.Model):
         ('plaid', 'Bank Sync (Plaid)'),
         ('receipt', 'Receipt Scan'),
     ]
-    
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='transactions',
-        null=True, blank=True  # Make optional for no-auth mode
-    )
     
     # Transaction details
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -107,9 +91,9 @@ class Transaction(models.Model):
         db_table = 'transactions'
         ordering = ['-date', '-created_at']
         indexes = [
-            models.Index(fields=['user', 'date']),
-            models.Index(fields=['user', 'category']),
-            models.Index(fields=['user', 'transaction_type']),
+            models.Index(fields=['date']),
+            models.Index(fields=['category']),
+            models.Index(fields=['transaction_type']),
         ]
     
     def __str__(self):
@@ -125,11 +109,6 @@ class Budget(models.Model):
         ('yearly', 'Yearly'),
     ]
     
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='budgets'
-    )
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
@@ -148,7 +127,7 @@ class Budget(models.Model):
     
     class Meta:
         db_table = 'budgets'
-        unique_together = ['user', 'category', 'period']
+        unique_together = ['category', 'period']
     
     def __str__(self):
-        return f"{self.user.username} - {self.category.name}: {self.amount}/{self.period}"
+        return f"{self.category.name}: {self.amount}/{self.period}"

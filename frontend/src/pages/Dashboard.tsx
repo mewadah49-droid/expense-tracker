@@ -38,19 +38,19 @@ function TiltCard({ children, className, color = "indigo", index = 0 }: any) {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const ref = useRef<HTMLDivElement>(null)
-  
+
   const mouseXSpring = useSpring(x, { stiffness: 500, damping: 100 })
   const mouseYSpring = useSpring(y, { stiffness: 500, damping: 100 })
-  
+
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["8deg", "-8deg"])
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-8deg", "8deg"])
-  
+
   const glowX = useTransform(mouseXSpring, [-0.5, 0.5], ["0%", "100%"])
   const glowY = useTransform(mouseYSpring, [-0.5, 0.5], ["0%", "100%"])
-  
+
   // FIXED: useMotionTemplate called at top level
   const background = useMotionTemplate`radial-gradient(circle at ${glowX} ${glowY}, rgba(99,102,241,0.4), transparent 50%)`
-  
+
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
@@ -61,21 +61,21 @@ function TiltCard({ children, className, color = "indigo", index = 0 }: any) {
     x.set(xPct)
     y.set(yPct)
   }
-  
+
   const handleMouseLeave = () => {
     x.set(0)
     y.set(0)
   }
-  
+
   const colorSchemes = {
     indigo: "from-indigo-500 via-purple-500 to-pink-500 shadow-indigo-500/25",
     emerald: "from-emerald-400 via-teal-500 to-cyan-500 shadow-emerald-500/25",
     rose: "from-rose-400 via-pink-500 to-orange-400 shadow-rose-500/25",
     amber: "from-amber-400 via-orange-500 to-yellow-400 shadow-amber-500/25",
   }
-  
+
   const borderGradient = colorSchemes[color as keyof typeof colorSchemes] || colorSchemes.indigo
-  
+
   return (
     <motion.div
       ref={ref}
@@ -91,7 +91,7 @@ function TiltCard({ children, className, color = "indigo", index = 0 }: any) {
       }}
       className={`relative group ${className}`}
     >
-      <div 
+      <div
         className="relative h-full bg-white rounded-3xl border border-slate-200/60 shadow-xl transition-shadow duration-300 group-hover:shadow-2xl overflow-hidden"
         style={{ transformStyle: "preserve-3d" }}
       >
@@ -99,19 +99,19 @@ function TiltCard({ children, className, color = "indigo", index = 0 }: any) {
           className={`absolute -inset-0.5 bg-gradient-to-r ${borderGradient} rounded-3xl opacity-0 group-hover:opacity-70 blur-xl transition-opacity duration-500`}
           style={{ background }}
         />
-        
-        <div 
+
+        <div
           className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
           style={{
             background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 45%, rgba(255,255,255,0.1) 50%, transparent 54%)",
             transform: "translateZ(1px)",
           }}
         />
-        
+
         <div className="relative h-full p-6" style={{ transform: "translateZ(40px)" }}>
           {children}
         </div>
-        
+
         <motion.div
           className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-white/40 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"
           animate={{ y: [0, -10, 0], scale: [1, 1.2, 1] }}
@@ -125,10 +125,10 @@ function TiltCard({ children, className, color = "indigo", index = 0 }: any) {
 // Animated counter
 function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
   const spring = useSpring(0, { stiffness: 100, damping: 30 })
-  const display = useTransform(spring, (current) => 
+  const display = useTransform(spring, (current) =>
     `${prefix}${Math.floor(Math.abs(current)).toLocaleString()}${suffix}`
   )
-  
+
   useEffect(() => {
     spring.set(Math.abs(value))
   }, [value, spring])
@@ -174,15 +174,20 @@ const PremiumSkeleton = () => (
 export default function Dashboard() {
   const [, setHoveredChart] = useState<number | null>(null)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
-  
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const response = await api.get('/api/analytics/dashboard/')
-      return response.data
+      // Get monthly budget from localStorage (no-auth mode)
+      const savedBudget = localStorage.getItem('monthly_budget')
+      return {
+        ...response.data,
+        monthly_budget: savedBudget ? parseFloat(savedBudget) : 0
+      }
     },
   })
-  
+
   const { data: insights } = useQuery({
     queryKey: ['spending-insights'],
     queryFn: async () => {
@@ -190,7 +195,7 @@ export default function Dashboard() {
       return response.data
     },
   })
-  
+
   const { data: forecast } = useQuery({
     queryKey: ['spending-forecast'],
     queryFn: async () => {
@@ -198,24 +203,24 @@ export default function Dashboard() {
       return response.data
     },
   })
-  
+
   // Safe calculations
   const monthlyBudget = stats?.monthly_budget || 0
   const totalSpent = stats?.total_spent || 0
   const totalIncome = stats?.total_income || 0
-  
-  const remainingBudget = monthlyBudget > 0 
-    ? monthlyBudget - totalSpent 
+
+  const remainingBudget = monthlyBudget > 0
+    ? monthlyBudget - totalSpent
     : totalIncome - totalSpent
-  
+
   const hasBudget = monthlyBudget > 0
-  const budgetPercentage = hasBudget 
+  const budgetPercentage = hasBudget
     ? Math.min(Math.max((totalSpent / monthlyBudget) * 100, 0), 100)
     : 0
-  
+
   const isOverspent = remainingBudget < 0
   const overspentAmount = Math.abs(remainingBudget)
-  
+
   const getBudgetStatus = () => {
     if (!hasBudget) return { label: 'No Budget', color: 'slate', icon: '📋' }
     if (isOverspent) return { label: 'Overspent', color: 'rose', icon: '🚨' }
@@ -224,27 +229,27 @@ export default function Dashboard() {
     if (budgetPercentage > 50) return { label: 'On Track', color: 'blue', icon: '📊' }
     return { label: 'Great', color: 'emerald', icon: '✓' }
   }
-  
+
   const budgetStatus = getBudgetStatus()
   const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
-  
+
   if (isLoading) return <PremiumSkeleton />
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="space-y-8 pb-12 max-w-7xl mx-auto"
       style={{ perspective: "1000px" }}
     >
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div>
-          <motion.div 
+          <motion.div
             className="flex items-center gap-3 mb-2"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -259,7 +264,7 @@ export default function Dashboard() {
           </motion.div>
           <p className="text-slate-500 text-base md:text-lg">Your financial empire at a glance</p>
         </div>
-        
+
         <motion.button
           whileHover={{ scale: 1.05, rotateX: -5 }}
           whileTap={{ scale: 0.95 }}
@@ -301,7 +306,7 @@ export default function Dashboard() {
         {/* Total Spent */}
         <TiltCard color="rose" index={0}>
           <div className="flex items-start justify-between mb-4">
-            <motion.div 
+            <motion.div
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/30"
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
@@ -313,7 +318,7 @@ export default function Dashboard() {
               This month
             </span>
           </div>
-          <motion.p 
+          <motion.p
             className="text-2xl md:text-4xl font-bold text-slate-800 mb-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -328,7 +333,7 @@ export default function Dashboard() {
         {/* Total Income */}
         <TiltCard color="emerald" index={1}>
           <div className="flex items-start justify-between mb-4">
-            <motion.div 
+            <motion.div
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30"
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
@@ -340,7 +345,7 @@ export default function Dashboard() {
               +12.5%
             </span>
           </div>
-          <motion.p 
+          <motion.p
             className="text-2xl md:text-4xl font-bold text-slate-800 mb-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -354,12 +359,11 @@ export default function Dashboard() {
         {/* Remaining Budget */}
         <TiltCard color={isOverspent ? "rose" : "indigo"} index={2}>
           <div className="flex items-start justify-between mb-4">
-            <motion.div 
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
-                isOverspent 
-                  ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30' 
-                  : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30'
-              }`}
+            <motion.div
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isOverspent
+                ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30'
+                : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30'
+                }`}
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
@@ -381,8 +385,8 @@ export default function Dashboard() {
               </motion.div>
             )}
           </div>
-          
-          <motion.p 
+
+          <motion.p
             className={`text-4xl font-bold mb-1 ${isOverspent ? 'text-rose-600' : 'text-slate-800'}`}
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -391,11 +395,11 @@ export default function Dashboard() {
             {isOverspent && <span className="text-2xl">-</span>}
             <AnimatedNumber value={Math.abs(remainingBudget)} prefix="₹" />
           </motion.p>
-          
+
           <p className="text-sm font-medium text-slate-500">
             {isOverspent ? 'Overspent' : hasBudget ? 'Remaining Budget' : 'Net Balance'}
           </p>
-          
+
           {isOverspent && (
             <p className="text-xs text-rose-500 mt-1">
               Over budget by {formatCurrency(overspentAmount)}
@@ -406,30 +410,29 @@ export default function Dashboard() {
         {/* Budget Progress */}
         <TiltCard color="amber" index={3}>
           <div className="flex items-start justify-between mb-4">
-            <motion.div 
+            <motion.div
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30"
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
               <Target className="w-7 h-7 text-white" />
             </motion.div>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-              budgetStatus.color === 'rose' 
-                ? 'text-rose-600 bg-rose-50 border-rose-200' 
-                : budgetStatus.color === 'amber'
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${budgetStatus.color === 'rose'
+              ? 'text-rose-600 bg-rose-50 border-rose-200'
+              : budgetStatus.color === 'amber'
                 ? 'text-amber-600 bg-amber-50 border-amber-200'
                 : budgetStatus.color === 'emerald'
-                ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                : budgetStatus.color === 'blue'
-                ? 'text-blue-600 bg-blue-50 border-blue-200'
-                : 'text-slate-600 bg-slate-50 border-slate-200'
-            }`}>
+                  ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                  : budgetStatus.color === 'blue'
+                    ? 'text-blue-600 bg-blue-50 border-blue-200'
+                    : 'text-slate-600 bg-slate-50 border-slate-200'
+              }`}>
               {budgetStatus.icon} {budgetStatus.label}
             </span>
           </div>
-          
+
           <div className="flex items-end gap-2 mb-2">
-            <motion.p 
+            <motion.p
               className="text-4xl font-bold text-slate-800"
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -445,20 +448,19 @@ export default function Dashboard() {
               {hasBudget ? 'used' : 'N/A'}
             </span>
           </div>
-          
+
           {hasBudget ? (
             <>
               <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div
-                  className={`absolute inset-y-0 left-0 rounded-full ${
-                    isOverspent || budgetPercentage > 90
-                      ? 'bg-gradient-to-r from-rose-400 to-rose-600' 
-                      : budgetPercentage > 75 
+                  className={`absolute inset-y-0 left-0 rounded-full ${isOverspent || budgetPercentage > 90
+                    ? 'bg-gradient-to-r from-rose-400 to-rose-600'
+                    : budgetPercentage > 75
                       ? 'bg-gradient-to-r from-amber-400 to-orange-500'
                       : budgetPercentage > 50
-                      ? 'bg-gradient-to-r from-blue-400 to-indigo-500'
-                      : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                  }`}
+                        ? 'bg-gradient-to-r from-blue-400 to-indigo-500'
+                        : 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                    }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
@@ -502,14 +504,13 @@ export default function Dashboard() {
                 <p className="text-slate-500 mt-1">AI-Powered predictions</p>
               </div>
               {forecast?.trend && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className={`px-4 py-2 rounded-xl font-bold text-sm border ${
-                    forecast.trend === 'increasing' 
-                      ? 'bg-rose-50 text-rose-600 border-rose-200' 
-                      : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                  }`}
+                  className={`px-4 py-2 rounded-xl font-bold text-sm border ${forecast.trend === 'increasing'
+                    ? 'bg-rose-50 text-rose-600 border-rose-200'
+                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                    }`}
                 >
                   {forecast.trend === 'increasing' ? (
                     <TrendingUp className="w-4 h-4 inline mr-1" />
@@ -520,7 +521,7 @@ export default function Dashboard() {
                 </motion.div>
               )}
             </div>
-            
+
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[...(forecast?.historical_data || []), ...(forecast?.predictions?.map((p: any) => ({
@@ -553,7 +554,7 @@ export default function Dashboard() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            
+
             {forecast?.model_accuracy && (
               <div className="mt-6 flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
                 <Brain className="w-5 h-5 text-indigo-600" />
@@ -582,7 +583,7 @@ export default function Dashboard() {
               Spending by Category
             </h2>
             <p className="text-slate-500 mb-8">Where your money goes</p>
-            
+
             <div className="h-72 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -597,8 +598,8 @@ export default function Dashboard() {
                     nameKey="name"
                   >
                     {insights?.top_categories?.map((_entry: any, index: number) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
                         stroke="white"
                         strokeWidth={3}
@@ -608,7 +609,7 @@ export default function Dashboard() {
                   <Tooltip content={<PremiumTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              
+
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
                   <p className="text-3xl font-bold text-slate-800">{insights?.top_categories?.length || 0}</p>
@@ -616,7 +617,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-3 mt-6">
               {insights?.top_categories?.slice(0, 5).map((cat: any, i: number) => (
                 <motion.div
@@ -626,8 +627,8 @@ export default function Dashboard() {
                   transition={{ delay: 0.6 + i * 0.1 }}
                   whileHover={{ scale: 1.1, y: -2 }}
                   className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow-sm cursor-pointer"
-                  style={{ 
-                    backgroundColor: `${COLORS[i]}15`, 
+                  style={{
+                    backgroundColor: `${COLORS[i]}15`,
                     color: COLORS[i],
                     border: `2px solid ${COLORS[i]}30`
                   }}
@@ -682,10 +683,9 @@ function BudgetModal({
 
   const updateBudget = useMutation({
     mutationFn: async (amount: number) => {
-      const response = await api.patch('/api/users/profile/', {
-        monthly_budget: amount,
-      })
-      return response.data
+      // Store budget in localStorage since we don't have user profiles in no-auth mode
+      localStorage.setItem('monthly_budget', amount.toString())
+      return { monthly_budget: amount }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -723,7 +723,7 @@ function BudgetModal({
       >
         <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-6 text-white overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
-          
+
           <div className="relative flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -732,7 +732,7 @@ function BudgetModal({
               </h2>
               <p className="text-amber-100 mt-1">Track your spending goals</p>
             </div>
-            <motion.button 
+            <motion.button
               whileHover={{ rotate: 90 }}
               onClick={onClose}
               className="p-2 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"

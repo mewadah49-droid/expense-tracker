@@ -84,7 +84,7 @@ class AnomalyDetectionView(APIView):
     permission_classes = []  # No authentication required
     
     def get(self, request):
-        service = BudgetForecastingService(request.user)
+        service = BudgetForecastingService()
         anomalies = service.detect_anomalies()
         
         return Response({
@@ -96,10 +96,10 @@ class AnomalyDetectionView(APIView):
 class SpendingInsightsView(APIView):
     """Get comprehensive spending insights."""
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # No authentication required
     
     def get(self, request):
-        service = BudgetForecastingService(request.user)
+        service = BudgetForecastingService()
         insights = service.get_spending_insights()
         
         return Response(insights)

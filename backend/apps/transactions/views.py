@@ -39,8 +39,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def defaults(self, request):
-        """Get only default categories."""
-        categories = Category.objects.filter(user=None)
+        """Get all categories (no user filtering in no-auth mode)."""
+        categories = Category.objects.all()
         serializer = self.get_serializer(categories, many=True)
         return Response(serializer.data)
 
@@ -202,25 +202,23 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     cat_result = categorizer.categorize(
                         description=description,
                         merchant=description.split()[0] if description else '',
-                        amount=float(amount),
-                        user=request.user
+                        amount=float(amount)
                     )
                     
                     category = cat_result['category'] if cat_result else None
                     
-                    # Create transaction
+                    # Create transaction (no user in no-auth mode)
                     Transaction.objects.create(
-                        user=request.user,
                         date=date,
                         description=description,
                         merchant=description.split()[0] if description else '',
                         amount=amount,
                         transaction_type=trans_type,
                         category=category,
-                        source='csv_import',
+                        source='manual',
                         ai_categorized=True if category else False,
-                        ai_confidence=cat_result['confidence'] if cat_result else None,
-                        ai_suggested_category=cat_result['suggested_name'] if cat_result else None,
+                        ai_confidence=cat_result['confidence'] if cat_result else 0.0,
+                        ai_suggested_category=cat_result['suggested_name'] if cat_result else '',
                     )
                     imported += 1
                     
@@ -268,10 +266,10 @@ class BudgetViewSet(viewsets.ModelViewSet):
     """ViewSet for managing budgets."""
     
     serializer_class = BudgetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # No authentication required
     
     def get_queryset(self):
-        return Budget.objects.filter(user=self.request.user).select_related('category')
+        return Budget.objects.all().select_related('category')
     
     @action(detail=False, methods=['get'])
     def alerts(self, request):

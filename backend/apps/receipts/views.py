@@ -136,9 +136,8 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                 name__iexact=receipt.suggested_category
             ).first()
         
-        # Create transaction
+        # Create transaction (no user in no-auth mode)
         transaction = Transaction.objects.create(
-            user=request.user,
             amount=receipt.total_amount,
             description=serializer.validated_data.get(
                 'description',

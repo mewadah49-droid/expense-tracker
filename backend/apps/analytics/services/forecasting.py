@@ -232,9 +232,8 @@ class BudgetForecastingService:
         current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
         
-        # Current month spending
+        # Current month spending (no user filtering in no-auth mode)
         current_month = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense',
             date__gte=current_month_start.date()
         ).aggregate(
@@ -245,7 +244,6 @@ class BudgetForecastingService:
         
         # Last month spending
         last_month = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense',
             date__gte=last_month_start.date(),
             date__lt=current_month_start.date()
@@ -253,7 +251,6 @@ class BudgetForecastingService:
         
         # Top spending categories
         top_categories = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense',
             date__gte=current_month_start.date()
         ).values(
@@ -320,15 +317,10 @@ class BudgetForecastingService:
                 f"💡 {top_cat['category__name']} is your highest expense category this month."
             )
         
-        if float(self.user.monthly_budget) > 0:
-            budget_usage = (current_spending / float(self.user.monthly_budget)) * 100
-            if budget_usage > 80:
+        if current_spending > 0 and last_spending > 0:
+            if current_spending < last_spending * 0.8:
                 recommendations.append(
-                    f"⚠️ You've used {budget_usage:.0f}% of your monthly budget."
-                )
-            elif budget_usage < 50:
-                recommendations.append(
-                    f"✅ Great job! You've only used {budget_usage:.0f}% of your budget."
+                    "✅ Great job! Your spending is down compared to last month."
                 )
         
         return recommendations

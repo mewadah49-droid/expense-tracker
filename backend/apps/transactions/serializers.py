@@ -76,10 +76,6 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
         auto_categorize = validated_data.pop('auto_categorize', True)
         validated_data['source'] = 'manual'
         
-        # For production compatibility, use a dummy user ID (assuming user 1 exists)
-        # This is a temporary workaround until proper migrations can be applied
-        validated_data['user_id'] = 1
-        
         # If no category and auto_categorize is enabled, use AI
         if not validated_data.get('category') and auto_categorize:
             try:
@@ -153,6 +149,5 @@ class BudgetSerializer(serializers.ModelSerializer):
         return 0
     
     def create(self, validated_data):
-        # For no-auth mode, assign to dummy user
-        validated_data['user_id'] = 1
+        # For no-auth mode, no user assignment needed
         return super().create(validated_data)
