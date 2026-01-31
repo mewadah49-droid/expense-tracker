@@ -30,10 +30,8 @@ export const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().accessToken
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
+    // Always use demo token for now
+    config.headers.Authorization = `Bearer demo-token`
     return config
   },
   (error) => Promise.reject(error)

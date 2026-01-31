@@ -35,10 +35,18 @@ interface RegisterData {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
+      user: {
+        id: 1,
+        username: 'demo',
+        email: 'demo@example.com',
+        firstName: 'Demo',
+        lastName: 'User',
+        monthlyBudget: 5000,
+        currency: 'USD'
+      },
+      accessToken: 'demo-token',
+      refreshToken: 'demo-refresh',
+      isAuthenticated: true,
       
       login: async (email: string, password: string) => {
         const response = await api.post('/api/auth/token/', {
