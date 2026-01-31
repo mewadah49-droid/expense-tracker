@@ -1,5 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
+import { Routes, Route } from 'react-router-dom'
 import Layout from '@/components/Layout'
 import Dashboard from '@/pages/Dashboard'
 import Transactions from '@/pages/Transactions'
@@ -7,8 +6,6 @@ import Receipts from '@/pages/Receipts'
 import Import from '@/pages/Import'
 import Analytics from '@/pages/Analytics'
 import Settings from '@/pages/Settings'
-import Login from '@/pages/Login'
-import Register from '@/pages/Register'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // Temporarily bypass authentication for testing
@@ -18,9 +15,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      
       <Route path="/" element={
         <ProtectedRoute>
           <Layout />
