@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
   CreditCard,

@@ -174,7 +174,6 @@ const PremiumSkeleton = () => (
 export default function Dashboard() {
   const [, setHoveredChart] = useState<number | null>(null)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
-  const _queryClient = useQueryClient()
   
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
