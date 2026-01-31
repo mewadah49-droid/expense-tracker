@@ -2,21 +2,15 @@ import axios from 'axios'
 
 // Get the API URL
 const getApiUrl = () => {
-  // Use VITE_API_URL if set (for production)
-  if (import.meta.env.VITE_API_URL) {
-    console.log('Using VITE_API_URL:', import.meta.env.VITE_API_URL)
-    return import.meta.env.VITE_API_URL
-  }
-  
-  // TEMPORARY: Hardcode production URL until VITE_API_URL works
-  // Replace this with your actual Render backend URL
+  // Check if we're in production (not localhost)
   const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  
   if (isProduction) {
-    // Your actual backend URL
+    // Always use the production backend URL
     return 'https://expense-tracker-api-h99f.onrender.com'
   }
   
-  // Fallback for development
+  // Development
   return 'http://localhost:8000'
 }
 
