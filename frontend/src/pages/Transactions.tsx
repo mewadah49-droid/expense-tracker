@@ -384,7 +384,7 @@ function TransactionModal({
     onSubmit({
       ...formData,
       amount: parseFloat(formData.amount),
-      category: formData.category || undefined,
+      category: formData.category ? parseInt(formData.category) : null,
     })
   }
 
