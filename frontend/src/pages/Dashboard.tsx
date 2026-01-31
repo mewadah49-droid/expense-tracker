@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { motion, useSpring, useTransform, useMotionValue, useMotionTemplate, AnimatePresence } from 'framer-motion'
+import { motion, useSpring, useTransform, useMotionValue, AnimatePresence } from 'framer-motion'
 import {
   Wallet,
   TrendingUp,
@@ -24,7 +25,7 @@ import {
 interface TiltCardProps {
   children: React.ReactNode
   className?: string
-  color?: 'indigo' | 'emerald' | 'rose' | 'amber'
+  color?: 'slate' | 'emerald' | 'rose' | 'amber' | 'blue'
   index?: number
 }
 
@@ -41,7 +42,7 @@ interface BudgetModalProps {
 }
 
 // 3D Tilt Card Component
-function TiltCard({ children, className = '', color = 'indigo', index = 0 }: TiltCardProps) {
+function TiltCard({ children, className = '', color = 'slate', index = 0 }: TiltCardProps) {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const ref = useRef<HTMLDivElement>(null)
@@ -51,11 +52,6 @@ function TiltCard({ children, className = '', color = 'indigo', index = 0 }: Til
 
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ['8deg', '-8deg'])
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ['-8deg', '8deg'])
-
-  const glowX = useTransform(mouseXSpring, [-0.5, 0.5], ['0%', '100%'])
-  const glowY = useTransform(mouseYSpring, [-0.5, 0.5], ['0%', '100%'])
-
-  const background = useMotionTemplate`radial-gradient(circle at ${glowX} ${glowY}, rgba(99,102,241,0.4), transparent 50%)`
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return
@@ -74,10 +70,11 @@ function TiltCard({ children, className = '', color = 'indigo', index = 0 }: Til
   }
 
   const colorSchemes = {
-    indigo: 'from-indigo-500 via-purple-500 to-pink-500 shadow-indigo-500/25',
+    slate: 'from-slate-400 via-gray-400 to-zinc-400 shadow-slate-500/20',
     emerald: 'from-emerald-400 via-teal-500 to-cyan-500 shadow-emerald-500/25',
-    rose: 'from-rose-400 via-pink-500 to-orange-400 shadow-rose-500/25',
+    rose: 'from-rose-400 via-red-500 to-orange-400 shadow-rose-500/25',
     amber: 'from-amber-400 via-orange-500 to-yellow-400 shadow-amber-500/25',
+    blue: 'from-blue-400 via-sky-500 to-cyan-400 shadow-blue-500/25',
   }
 
   const borderGradient = colorSchemes[color]
@@ -98,21 +95,15 @@ function TiltCard({ children, className = '', color = 'indigo', index = 0 }: Til
       className={`relative group ${className}`}
     >
       <div
-        className="relative h-full bg-white rounded-3xl border border-slate-200/60 shadow-xl transition-shadow duration-300 group-hover:shadow-2xl overflow-hidden"
+        className="relative h-full bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-xl shadow-slate-200/50 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-slate-200/60 overflow-hidden"
         style={{ transformStyle: 'preserve-3d' }}
       >
         <motion.div
-          className={`absolute -inset-0.5 bg-gradient-to-r ${borderGradient} rounded-3xl opacity-0 group-hover:opacity-70 blur-xl transition-opacity duration-500`}
-          style={{ background }}
+          className={`absolute -inset-0.5 bg-gradient-to-r ${borderGradient} rounded-3xl opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-500`}
         />
 
         <div
-          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 45%, rgba(255,255,255,0.1) 50%, transparent 54%)',
-            transform: 'translateZ(1px)',
-          }}
+          className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-white/60 via-transparent to-slate-100/30"
         />
 
         <div className="relative h-full p-6" style={{ transform: 'translateZ(40px)' }}>
@@ -120,7 +111,7 @@ function TiltCard({ children, className = '', color = 'indigo', index = 0 }: Til
         </div>
 
         <motion.div
-          className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-white/40 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-white to-slate-100 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity"
           animate={{ y: [0, -10, 0], scale: [1, 1.2, 1] }}
           transition={{ duration: 3, repeat: Infinity }}
         />
@@ -146,23 +137,40 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 // Loading skeleton
 const PremiumSkeleton = () => (
   <div className="space-y-8">
-    <div className="h-12 bg-gradient-to-r from-slate-200 to-slate-300 rounded-2xl w-1/3 animate-pulse" />
+    <div className="h-12 bg-gradient-to-r from-slate-100 to-slate-200 rounded-2xl w-1/3 animate-pulse" />
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-40 bg-gradient-to-br from-slate-200 to-slate-300 rounded-3xl animate-pulse" />
+        <div key={i} className="h-40 bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl animate-pulse" />
       ))}
-    </div>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="h-96 bg-gradient-to-br from-slate-200 to-slate-300 rounded-3xl animate-pulse" />
-      <div className="h-96 bg-gradient-to-br from-slate-200 to-slate-300 rounded-3xl animate-pulse" />
     </div>
   </div>
 )
 
-// Budget Modal Component
+// Clean White Glassmorphism 3D Budget Modal
 function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
   const [budget, setBudget] = useState(currentBudget > 0 ? currentBudget.toString() : '')
   const queryClient = useQueryClient()
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // 3D tilt for modal
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const rotateX = useTransform(y, [-0.5, 0.5], ['3deg', '-3deg'])
+  const rotateY = useTransform(x, [-0.5, 0.5], ['-3deg', '3deg'])
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!modalRef.current) return
+    const rect = modalRef.current.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    x.set((event.clientX - centerX) / (rect.width / 2))
+    y.set((event.clientY - centerY) / (rect.height / 2))
+  }
+
+  const handleMouseLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
 
   const updateBudget = useMutation({
     mutationFn: async (amount: number) => {
@@ -189,110 +197,178 @@ function BudgetModal({ currentBudget, onClose, onSave }: BudgetModalProps) {
     }
   }
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-200/60 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* Soft ambient background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-slate-100/50 via-white/30 to-gray-100/50 rounded-full blur-3xl" />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        ref={modalRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+        exit={{ opacity: 0, scale: 0.9, y: 40 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: 'preserve-3d',
+        }}
+        className="relative w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-6 text-white overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+        {/* White Glass Card */}
+        <div className="relative bg-white/90 backdrop-blur-2xl rounded-3xl border border-white/80 shadow-2xl shadow-slate-300/50 overflow-hidden">
+          {/* Subtle top gradient line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-300 via-gray-300 to-slate-300" />
 
-          <div className="relative flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Target className="w-6 h-6" />
-                {currentBudget > 0 ? 'Edit Monthly Budget' : 'Set Monthly Budget'}
-              </h2>
-              <p className="text-amber-100 mt-1">Track your spending goals</p>
+          {/* Inner glow */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-slate-50/30 pointer-events-none" />
+
+          {/* Clean Header */}
+          <div className="relative p-8 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <motion.h2
+                  className="text-2xl font-bold text-slate-800 flex items-center gap-3"
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="p-2.5 bg-slate-100 rounded-xl border border-slate-200 shadow-sm">
+                    <Target className="w-6 h-6 text-slate-700" />
+                  </div>
+                  {currentBudget > 0 ? 'Edit Budget' : 'Set Budget'}
+                </motion.h2>
+                <motion.p
+                  className="text-slate-500 mt-2 text-sm font-medium"
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  Manage your monthly spending limit
+                </motion.p>
+              </div>
+
+              <motion.button
+                whileHover={{ rotate: 90, scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 transition-colors shadow-sm"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </motion.button>
             </div>
-            <motion.button
-              whileHover={{ rotate: 90 }}
-              onClick={onClose}
-              className="p-2 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </motion.button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-amber-500" />
-              Monthly Budget Amount *
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-lg">₹</span>
-              <input
-                type="number"
-                required
-                step="0.01"
-                min="0"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="50000"
-                className="w-full pl-10 pr-4 py-4 bg-amber-50 border-2 border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 focus:bg-white transition-all text-lg font-semibold text-slate-800"
-              />
-            </div>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-800">
-                <p className="font-semibold mb-1">💡 Budget Tips:</p>
-                <ul className="space-y-1 text-xs">
-                  <li>• Start with your monthly income minus fixed expenses</li>
-                  <li>• Leave room for savings (aim for 20% of income)</li>
-                  <li>• Track progress and adjust as needed</li>
-                </ul>
+          <form onSubmit={handleSubmit} className="relative p-8 space-y-6">
+            {/* Clean Input */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 ml-1">
+                <Wallet className="w-4 h-4 text-slate-500" />
+                Monthly Budget Amount
+              </label>
+              <div className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-slate-300 to-gray-300 rounded-2xl opacity-30 group-hover:opacity-60 blur transition duration-500 group-focus-within:opacity-80" />
+                <div className="relative flex items-center bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group-focus-within:border-slate-400 transition-colors">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-12 pr-4 py-5 bg-transparent text-2xl font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-3">
-            <motion.button
-              type="button"
-              onClick={onClose}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors"
+            {/* Clean Tips Card */}
+            <motion.div
+              className="relative bg-slate-50/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-5"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
             >
-              Cancel
-            </motion.button>
-            <motion.button
-              type="submit"
-              disabled={updateBudget.isPending}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex-1 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {updateBudget.isPending ? (
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                  <Sparkles className="w-5 h-5" />
-                </motion.div>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Save Budget
-                </>
-              )}
-            </motion.button>
-          </div>
-        </form>
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-800 mb-2 text-sm">Budgeting Tips</p>
+                  <ul className="space-y-1.5 text-xs text-slate-600">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                      Follow the 50/30/20 rule for needs/wants/savings
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                      Review and adjust based on past 3 months spending
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                      Keep 10% buffer for unexpected expenses
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <motion.button
+                type="button"
+                onClick={onClose}
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border border-slate-200 transition-all shadow-sm"
+              >
+                Cancel
+              </motion.button>
+
+              <motion.button
+                type="submit"
+                disabled={updateBudget.isPending}
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 relative py-3.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-500/25 disabled:opacity-50 overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                <span className="relative flex items-center justify-center gap-2">
+                  {updateBudget.isPending ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                      <Sparkles className="w-5 h-5" />
+                    </motion.div>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Save Budget
+                    </>
+                  )}
+                </span>
+              </motion.button>
+            </div>
+          </form>
+        </div>
+
+        {/* Soft shadow layers for 3D effect */}
+        <div className="absolute -inset-4 bg-slate-300/20 rounded-[2rem] blur-2xl -z-10" />
+        <div className="absolute -inset-8 bg-slate-200/20 rounded-[3rem] blur-3xl -z-20" />
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }
 
@@ -340,7 +416,7 @@ export default function Dashboard() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-8 pb-12 max-w-7xl mx-auto"
+      className="space-y-8 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ perspective: '1000px' }}
     >
       {/* Header */}
@@ -356,50 +432,40 @@ export default function Dashboard() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/25">
+            <div className="p-2 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl shadow-lg shadow-slate-500/25">
               <Crown className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
               Dashboard
             </h1>
           </motion.div>
-          <p className="text-slate-500 text-base md:text-lg">Your financial empire at a glance</p>
+          <p className="text-slate-500 text-base md:text-lg">Your financial overview</p>
         </div>
 
-        {/* Edit Budget Button - Always visible */}
+        {/* Clean White Glassmorphism Edit Budget Button */}
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.03, y: -2 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => setShowBudgetModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium text-sm shadow-lg shadow-amber-500/25"
+          className="group relative px-6 py-3 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-300/50 transition-all duration-300"
         >
-          <Settings className="w-4 h-4" />
-          {hasBudget ? 'Edit Budget' : 'Set Budget'}
+          {/* Subtle gradient overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-50 via-white to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+          {/* Shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+          <span className="relative flex items-center gap-2.5 font-semibold text-slate-700">
+            <div className="p-1.5 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors border border-slate-200">
+              <Settings className="w-4 h-4 text-slate-600 group-hover:rotate-90 transition-transform duration-500" />
+            </div>
+            {hasBudget ? 'Edit Budget' : 'Set Budget'}
+          </span>
         </motion.button>
       </motion.div>
 
-      {/* No Budget Warning */}
-      {!hasBudget && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3"
-        >
-          <AlertTriangle className="w-5 h-5 text-amber-600" />
-          <div>
-            <p className="text-amber-800 font-medium">No monthly budget set</p>
-            <p className="text-amber-600 text-sm">Set a budget to track your spending progress</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowBudgetModal(true)}
-            className="ml-auto px-4 py-2 bg-amber-600 text-white rounded-xl font-medium text-sm"
-          >
-            Set Budget
-          </motion.button>
-        </motion.div>
-      )}
+      {/* No Budget Warning - Clean Style */}
+
 
       {/* 3D Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ transformStyle: 'preserve-3d' }}>
@@ -407,7 +473,7 @@ export default function Dashboard() {
         <TiltCard color="rose" index={0}>
           <div className="flex items-start justify-between mb-4">
             <motion.div
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/30"
+              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-red-600 flex items-center justify-center shadow-lg shadow-rose-500/30"
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
@@ -427,7 +493,6 @@ export default function Dashboard() {
             <AnimatedNumber value={totalSpent} prefix="₹" />
           </motion.p>
           <p className="text-xs md:text-sm font-medium text-slate-500">Total Spent</p>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-200 via-pink-200 to-transparent opacity-50" />
         </TiltCard>
 
         {/* Total Income */}
@@ -457,14 +522,10 @@ export default function Dashboard() {
         </TiltCard>
 
         {/* Remaining Budget */}
-        <TiltCard color={isOverspent ? 'rose' : 'indigo'} index={2}>
+        <TiltCard color={isOverspent ? 'rose' : 'slate'} index={2}>
           <div className="flex items-start justify-between mb-4">
             <motion.div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
-                isOverspent
-                  ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30'
-                  : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30'
-              }`}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isOverspent ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30' : 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/30'}`}
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
@@ -510,19 +571,7 @@ export default function Dashboard() {
             >
               <Target className="w-7 h-7 text-white" />
             </motion.div>
-            <span
-              className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-                budgetStatus.color === 'rose'
-                  ? 'text-rose-600 bg-rose-50 border-rose-200'
-                  : budgetStatus.color === 'amber'
-                    ? 'text-amber-600 bg-amber-50 border-amber-200'
-                    : budgetStatus.color === 'emerald'
-                      ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                      : budgetStatus.color === 'blue'
-                        ? 'text-blue-600 bg-blue-50 border-blue-200'
-                        : 'text-slate-600 bg-slate-50 border-slate-200'
-              }`}
-            >
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${budgetStatus.color === 'rose' ? 'text-rose-600 bg-rose-50 border-rose-200' : budgetStatus.color === 'amber' ? 'text-amber-600 bg-amber-50 border-amber-200' : budgetStatus.color === 'emerald' ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : budgetStatus.color === 'blue' ? 'text-blue-600 bg-blue-50 border-blue-200' : 'text-slate-600 bg-slate-50 border-slate-200'}`}>
               {budgetStatus.icon} {budgetStatus.label}
             </span>
           </div>
@@ -541,22 +590,13 @@ export default function Dashboard() {
 
           {hasBudget ? (
             <>
-              <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <motion.div
-                  className={`absolute inset-y-0 left-0 rounded-full ${
-                    isOverspent || budgetPercentage > 90
-                      ? 'bg-gradient-to-r from-rose-400 to-rose-600'
-                      : budgetPercentage > 75
-                        ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                        : budgetPercentage > 50
-                          ? 'bg-gradient-to-r from-blue-400 to-indigo-500'
-                          : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                  }`}
+                  className={`absolute inset-y-0 left-0 rounded-full ${isOverspent || budgetPercentage > 90 ? 'bg-gradient-to-r from-rose-400 to-rose-600' : budgetPercentage > 75 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : budgetPercentage > 50 ? 'bg-gradient-to-r from-blue-400 to-sky-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}`}
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                   transition={{ duration: 1.5, ease: 'easeOut' }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" />
               </div>
               <p className="text-xs text-slate-400 mt-2">
                 {formatCurrency(totalSpent)} of {formatCurrency(monthlyBudget)}
@@ -580,20 +620,6 @@ export default function Dashboard() {
           />
         )}
       </AnimatePresence>
-
-      <style>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-      `}</style>
     </motion.div>
   )
 }
