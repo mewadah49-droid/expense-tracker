@@ -87,9 +87,15 @@ export default function Transactions() {
       if (filter !== 'all') params.append('transaction_type', filter)
       if (search) params.append('search', search)
       
+      console.log('Making API request to:', `/api/transactions/transactions/?${params}`)
       const response = await api.get(`/api/transactions/transactions/?${params}`)
+      console.log('API Response:', response)
+      console.log('Response data:', response.data)
+      
       // Handle both array and {results: array} formats
-      return Array.isArray(response.data) ? response.data : response.data.results || []
+      const result = Array.isArray(response.data) ? response.data : response.data.results || []
+      console.log('Extracted transactions:', result)
+      return result
     },
   })
   

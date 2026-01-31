@@ -32,8 +32,8 @@ class CategorySerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     """Serializer for transactions."""
     
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    category_icon = serializers.CharField(source='category.icon', read_only=True)
+    category_name = serializers.SerializerMethodField()
+    category_icon = serializers.SerializerMethodField()
     
     class Meta:
         model = Transaction
@@ -48,6 +48,12 @@ class TransactionSerializer(serializers.ModelSerializer):
             'id', 'ai_categorized', 'ai_confidence', 'ai_suggested_category',
             'source', 'created_at', 'updated_at'
         ]
+    
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category else ''
+    
+    def get_category_icon(self, obj):
+        return obj.category.icon if obj.category else ''
     
     def create(self, validated_data):
         validated_data['source'] = 'manual'
