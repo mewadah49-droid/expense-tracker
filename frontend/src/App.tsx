@@ -7,19 +7,10 @@ import Import from '@/pages/Import'
 import Analytics from '@/pages/Analytics'
 import Settings from '@/pages/Settings'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  // Temporarily bypass authentication for testing
-  return <>{children}</>
-}
-
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      }>
+      <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="receipts" element={<Receipts />} />

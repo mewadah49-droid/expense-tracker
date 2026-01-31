@@ -50,7 +50,6 @@ class TransactionSerializer(serializers.ModelSerializer):
         ]
     
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
         validated_data['source'] = 'manual'
         return super().create(validated_data)
 
@@ -69,7 +68,6 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         auto_categorize = validated_data.pop('auto_categorize', True)
-        validated_data['user'] = self.context['request'].user
         validated_data['source'] = 'manual'
         
         # If no category and auto_categorize is enabled, use AI
@@ -80,8 +78,7 @@ class TransactionCreateSerializer(serializers.ModelSerializer):
             result = categorizer.categorize(
                 description=validated_data['description'],
                 merchant=validated_data.get('merchant', ''),
-                amount=float(validated_data['amount']),
-                user=validated_data['user']
+                amount=float(validated_data['amount'])
             )
             
             if result:

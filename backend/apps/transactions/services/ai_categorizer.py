@@ -191,7 +191,7 @@ Respond with JSON only (no markdown, no code blocks):
     def _resolve_category(
         self,
         result: Dict[str, Any],
-        user
+        user=None
     ) -> Dict[str, Any]:
         """
         Resolve category name to actual Category model instance.

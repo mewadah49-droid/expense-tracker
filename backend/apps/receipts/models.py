@@ -19,7 +19,8 @@ class Receipt(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='receipts'
+        related_name='receipts',
+        null=True, blank=True  # Make optional for no-auth mode
     )
     
     # Image

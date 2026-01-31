@@ -17,7 +17,7 @@ class Category(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        null=True, blank=True,
+        null=True, blank=True,  # Make optional for no-auth mode
         related_name='categories'
     )
     
@@ -57,7 +57,8 @@ class Transaction(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='transactions'
+        related_name='transactions',
+        null=True, blank=True  # Make optional for no-auth mode
     )
     
     # Transaction details

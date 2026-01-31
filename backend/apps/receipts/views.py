@@ -20,11 +20,11 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     """ViewSet for managing receipts with OCR."""
     
     serializer_class = ReceiptSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # No authentication required
     parser_classes = [MultiPartParser, FormParser]
     
     def get_queryset(self):
-        return Receipt.objects.filter(user=self.request.user)
+        return Receipt.objects.all()  # No user filtering
     
     def get_serializer_class(self):
         if self.action == 'create':

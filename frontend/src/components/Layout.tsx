@@ -1,5 +1,4 @@
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 // import { motion } from 'framer-motion'
 import {
@@ -7,7 +6,6 @@ import {
   CreditCard,
   BarChart3,
   Settings,
-  LogOut,
   Scan,
   Upload,
   Menu,
@@ -25,9 +23,6 @@ const navigation = [
 ]
 
 export default function Layout() {
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
-  const navigate = useNavigate()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -35,11 +30,6 @@ export default function Layout() {
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [location.pathname])
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex font-sans">
@@ -119,25 +109,9 @@ export default function Layout() {
 
         {/* User Section */}
         <div className="p-4 border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 mb-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md">
-              {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase()}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-slate-800 truncate">
-                {user?.firstName || user?.username}
-              </p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-            </div>
+          <div className="text-center text-sm text-slate-500">
+            Expense Tracker - No Authentication
           </div>
-
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
         </div>
       </aside>
 

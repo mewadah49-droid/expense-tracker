@@ -35,7 +35,7 @@ class BudgetForecastingService:
     - Time series analysis for seasonal patterns
     """
     
-    def __init__(self, user):
+    def __init__(self, user=None):
         self.user = user
         self.scaler = StandardScaler()
     
@@ -50,7 +50,6 @@ class BudgetForecastingService:
         
         # Get historical monthly spending
         monthly_data = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense'
         ).annotate(
             month=TruncMonth('date')
@@ -131,7 +130,6 @@ class BudgetForecastingService:
         from apps.transactions.models import Transaction
         
         weekly_data = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense',
             category_id=category_id
         ).annotate(
@@ -185,7 +183,6 @@ class BudgetForecastingService:
         thirty_days_ago = timezone.now().date() - timedelta(days=30)
         
         transactions = Transaction.objects.filter(
-            user=self.user,
             transaction_type='expense',
             date__gte=thirty_days_ago
         ).values('id', 'amount', 'description', 'merchant', 'category__name', 'date')

@@ -27,16 +27,15 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """ViewSet for managing categories."""
     
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # No authentication required
     
     def get_queryset(self):
-        # Return default categories (user=null) and user's custom categories
-        return Category.objects.filter(
-            Q(user=None) | Q(user=self.request.user)
-        )
+        # Return all categories (no user filtering)
+        return Category.objects.all()
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # Don't assign user
+        serializer.save()
     
     @action(detail=False, methods=['get'])
     def defaults(self, request):
@@ -49,7 +48,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TransactionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing transactions."""
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # No authentication required
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['transaction_type', 'category', 'source', 'ai_categorized']
     search_fields = ['description', 'merchant', 'notes']
@@ -62,7 +61,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return TransactionSerializer
     
     def get_queryset(self):
-        queryset = Transaction.objects.filter(user=self.request.user)
+        queryset = Transaction.objects.all()  # No user filtering
         
         # Date range filtering
         start_date = self.request.query_params.get('start_date')
