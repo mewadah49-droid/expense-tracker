@@ -452,29 +452,6 @@ export default function Dashboard() {
         </motion.button>
       </motion.div>
 
-      {/* No Budget Warning */}
-      {!hasBudget && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-        >
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-amber-800 font-medium">No monthly budget set</p>
-            <p className="text-amber-600 text-sm">Set a budget to track your spending progress</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowBudgetModal(true)}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium text-sm transition-colors"
-          >
-            Set Budget
-          </motion.button>
-        </motion.div>
-      )}
-
       {/* 3D Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ transformStyle: 'preserve-3d' }}>
         {/* Total Spent */}
