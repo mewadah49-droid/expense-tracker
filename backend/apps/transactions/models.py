@@ -3,7 +3,7 @@ Transaction and Category models for expense tracking.
 """
 
 from django.db import models
-from django.conf import settings
+from django.contrib.auth.models import User
 
 
 class Category(models.Model):
@@ -15,7 +15,7 @@ class Category(models.Model):
     
     # If user is null, it's a default category
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         null=True, blank=True,  # Make optional for no-auth mode
         related_name='categories'
@@ -55,7 +55,7 @@ class Transaction(models.Model):
     ]
     
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name='transactions',
         null=True, blank=True  # Make optional for no-auth mode

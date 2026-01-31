@@ -19,6 +19,22 @@ class User(AbstractUser):
     )
     currency = models.CharField(max_length=3, default='INR')
     
+    # Fix reverse accessor clashes
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='custom_user_groups',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        verbose_name='groups',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='custom_user_permissions',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        verbose_name='user permissions',
+    )
+    
     # Profile
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     

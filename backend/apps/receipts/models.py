@@ -3,7 +3,7 @@ Receipt model for OCR-based expense extraction.
 """
 
 from django.db import models
-from django.conf import settings
+from django.contrib.auth.models import User
 
 
 class Receipt(models.Model):
@@ -17,7 +17,7 @@ class Receipt(models.Model):
     ]
     
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
         related_name='receipts',
         null=True, blank=True  # Make optional for no-auth mode

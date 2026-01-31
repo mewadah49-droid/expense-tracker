@@ -33,7 +33,6 @@ INSTALLED_APPS = [
     'django_filters',
     
     # Local apps
-    'apps.users',
     'apps.transactions',
     'apps.receipts',
     'apps.analytics',
@@ -137,8 +136,6 @@ REST_FRAMEWORK = {
 # }
 
 # CORS
-cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173')
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',')]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -155,6 +152,11 @@ CORS_ALLOW_HEADERS = [
 # Optionally allow all origins (useful for debugging deploy CORS issues).
 # Controlled via environment variable `CORS_ALLOW_ALL_ORIGINS` (default: False)
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() == 'true'
+
+# Only set CORS_ALLOWED_ORIGINS if not allowing all origins
+if not CORS_ALLOW_ALL_ORIGINS:
+    cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173')
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',')]
 
 # Security settings for production
 if not DEBUG:
