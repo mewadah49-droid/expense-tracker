@@ -17,7 +17,6 @@ import {
   Camera,
   FileImage,
   Zap,
-  Trash2,
   Receipt,
   Calendar,
 } from 'lucide-react'

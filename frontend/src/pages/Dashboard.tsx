@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   X,
   Save,
-  Receipt,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -173,9 +172,9 @@ const PremiumSkeleton = () => (
 )
 
 export default function Dashboard() {
-  const [hoveredChart, setHoveredChart] = useState<number | null>(null)
+  const [, setHoveredChart] = useState<number | null>(null)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
-  const queryClient = useQueryClient()
+  const _queryClient = useQueryClient()
   
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -598,7 +597,7 @@ export default function Dashboard() {
                     dataKey="amount"
                     nameKey="name"
                   >
-                    {insights?.top_categories?.map((entry: any, index: number) => (
+                    {insights?.top_categories?.map((_entry: any, index: number) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]}

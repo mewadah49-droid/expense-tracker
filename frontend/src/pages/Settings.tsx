@@ -50,7 +50,7 @@ export default function Settings() {
   })
 
   // Fetch preferences
-  const { data: preferences, isLoading: prefsLoading } = useQuery({
+  const { data: preferences } = useQuery({
     queryKey: ['preferences'],
     queryFn: async () => {
       const response = await api.get('/api/users/preferences/')

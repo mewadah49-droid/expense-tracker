@@ -7,23 +7,16 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   Plus,
   Search,
-  Filter,
   Sparkles,
   X,
   ArrowUpRight,
   ArrowDownRight,
   Receipt,
-  TrendingUp,
-  TrendingDown,
   Calendar,
   Store,
-  Tag,
-  Bot,
-  ChevronRight,
   Loader2,
   Edit,
   Trash2,
-  Wallet,
 } from 'lucide-react'
 
 interface Transaction {
@@ -442,7 +435,7 @@ function TransactionModal({
               <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
               <select
                 value={formData.transaction_type}
-                onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value as 'expense' | 'income' })}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
               >
                 <option value="expense">Expense</option>

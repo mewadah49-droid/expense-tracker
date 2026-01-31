@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 
 // Spring config
-const springConfig = { type: "spring", stiffness: 300, damping: 30 }
+const springConfig = { type: "spring" as const, stiffness: 300, damping: 30 }
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
