@@ -99,6 +99,10 @@ export default function Todo() {
         queryKey: ['tasks'],
         queryFn: async () => {
             const response = await api.get('/api/tasks/')
+            // Handle pagination from Django REST Framework
+            if (response.data.results) {
+                return response.data.results
+            }
             return response.data
         },
     })
