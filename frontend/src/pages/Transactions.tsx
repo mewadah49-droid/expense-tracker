@@ -431,13 +431,14 @@ function TransactionModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Category (optional)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 bg-slate-50"
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+              required
             >
-              <option value="">🤖 Auto-categorize with AI</option>
+              <option value="">Select a category</option>
               {categories?.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.icon} {cat.name}

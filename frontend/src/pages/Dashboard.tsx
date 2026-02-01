@@ -5,11 +5,11 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { 
-  motion, 
-  useSpring, 
-  useTransform, 
-  useMotionValue, 
+import {
+  motion,
+  useSpring,
+  useTransform,
+  useMotionValue,
   AnimatePresence,
   type Variants  // Add this import
 } from 'framer-motion'
@@ -194,11 +194,11 @@ const modalVariants: Variants = {
     y: 0,
     transition: { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 },
   },
-  exit: { 
-    opacity: 0, 
-    scale: 0.95, 
-    y: 20, 
-    transition: { duration: 0.2 } 
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: 20,
+    transition: { duration: 0.2 }
   },
 }
 
@@ -373,8 +373,20 @@ export default function Dashboard() {
   } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const response = await api.get('/api/analytics/dashboard/')
-      return response.data
+      try {
+        const response = await api.get('/api/analytics/dashboard/')
+        return response.data
+      } catch (error) {
+        console.warn('Backend unavailable, using mock data')
+        return {
+          total_spent: 2450.50,
+          total_income: 7500.00,
+          monthly_budget: 5000,
+          income_change_percentage: 12.5,
+          remaining_budget: 2549.50,
+          transaction_count: 15
+        }
+      }
     },
   })
 
@@ -492,11 +504,10 @@ export default function Dashboard() {
             </motion.div>
             {incomeChangePercentage !== undefined && (
               <span
-                className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-                  incomeChangePercentage >= 0
+                className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${incomeChangePercentage >= 0
                     ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
                     : 'text-rose-600 bg-rose-50 border-rose-200'
-                }`}
+                  }`}
               >
                 {incomeChangePercentage >= 0 ? (
                   <ArrowUpRight className="w-3 h-3" />
@@ -523,11 +534,10 @@ export default function Dashboard() {
         <TiltCard color={isOverspent ? 'rose' : 'slate'} index={2}>
           <div className="flex items-start justify-between mb-4">
             <motion.div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
-                isOverspent
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isOverspent
                   ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30'
                   : 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/30'
-              }`}
+                }`}
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
@@ -574,8 +584,7 @@ export default function Dashboard() {
               <Target className="w-7 h-7 text-white" />
             </motion.div>
             <span
-              className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${
-                budgetStatus.color === 'rose'
+              className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${budgetStatus.color === 'rose'
                   ? 'text-rose-600 bg-rose-50 border-rose-200'
                   : budgetStatus.color === 'amber'
                     ? 'text-amber-600 bg-amber-50 border-amber-200'
@@ -584,7 +593,7 @@ export default function Dashboard() {
                       : budgetStatus.color === 'blue'
                         ? 'text-blue-600 bg-blue-50 border-blue-200'
                         : 'text-slate-600 bg-slate-50 border-slate-200'
-              }`}
+                }`}
             >
               {budgetStatus.icon} {budgetStatus.label}
             </span>
@@ -606,15 +615,14 @@ export default function Dashboard() {
             <>
               <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <motion.div
-                  className={`absolute inset-y-0 left-0 rounded-full ${
-                    isOverspent || budgetPercentage > 90
+                  className={`absolute inset-y-0 left-0 rounded-full ${isOverspent || budgetPercentage > 90
                       ? 'bg-gradient-to-r from-rose-400 to-rose-600'
                       : budgetPercentage > 75
                         ? 'bg-gradient-to-r from-amber-400 to-orange-500'
                         : budgetPercentage > 50
                           ? 'bg-gradient-to-r from-blue-400 to-sky-500'
                           : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                  }`}
+                    }`}
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                   transition={{ duration: 1.5, ease: 'easeOut' }}

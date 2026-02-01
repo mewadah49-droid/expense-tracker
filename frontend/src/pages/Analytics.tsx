@@ -11,18 +11,20 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
 } from 'recharts'
 import {
   TrendingUp,
   TrendingDown,
-  AlertTriangle,
-  Sparkles,
-  Brain,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  Zap,
-  Target,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Receipt,
+  Calendar,
+  DollarSign,
 } from 'lucide-react'
 
 // Spring config
@@ -43,7 +45,7 @@ const itemVariants = {
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const spring = useSpring(0, { stiffness: 100, damping: 30 })
   const display = useTransform(spring, (current) => `${prefix}${current.toFixed(1)}`)
-  
+
   useEffect(() => {
     spring.set(value)
   }, [value, spring])
@@ -63,12 +65,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="text-slate-500 text-sm mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2">
-            <div 
-              className="w-2 h-2 rounded-full" 
+            <div
+              className="w-2 h-2 rounded-full"
               style={{ backgroundColor: entry.color }}
             />
             <span className="text-slate-600 font-medium">
-              {entry.name === 'spending' ? 'Actual' : 'Predicted'}:
+              Spending:
             </span>
             <span className="text-slate-900 font-bold">
               {formatCurrency(entry.value)}
@@ -83,82 +85,104 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function Analytics() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null)
-  
-  const { data: forecast } = useQuery({
-    queryKey: ['spending-forecast'],
+
+  const { data: trends } = useQuery({
+    queryKey: ['monthly-trends'],
     queryFn: async () => {
-      const response = await api.get('/api/analytics/forecast/?months=6')
+      const response = await api.get('/api/analytics/trends/?months=6')
       return response.data
     },
   })
-  
-  const { data: anomalies } = useQuery({
-    queryKey: ['anomalies'],
+
+  const { data: categories } = useQuery({
+    queryKey: ['category-breakdown'],
     queryFn: async () => {
-      const response = await api.get('/api/analytics/anomalies/')
+      const response = await api.get('/api/analytics/categories/?days=30')
       return response.data
     },
   })
-  
-  const { data: insights } = useQuery({
-    queryKey: ['spending-insights'],
+
+  const { data: topExpenses } = useQuery({
+    queryKey: ['top-expenses'],
     queryFn: async () => {
-      const response = await api.get('/api/analytics/insights/')
+      const response = await api.get('/api/analytics/top-expenses/?days=30&limit=5')
       return response.data
     },
   })
-  
-  const chartData = [
-    ...(forecast?.historical_data?.map((d: any) => ({
-      ...d,
-      predicted: null,
-    })) || []),
-    ...(forecast?.predictions?.map((p: any) => ({
-      month: p.month,
-      spending: null,
-      predicted: p.predicted_spending,
-      lower: p.lower_bound,
-      upper: p.upper_bound,
-    })) || []),
-  ]
+
+  const { data: comparison } = useQuery({
+    queryKey: ['spending-comparison'],
+    queryFn: async () => {
+      const response = await api.get('/api/analytics/comparison/')
+      return response.data
+    },
+  })
+
+  const { data: weekly } = useQuery({
+    queryKey: ['weekly-analytics'],
+    queryFn: async () => {
+      const response = await api.get('/api/analytics/weekly/')
+      return response.data
+    },
+  })
+
+  const { data: daily } = useQuery({
+    queryKey: ['daily-analytics'],
+    queryFn: async () => {
+      const response = await api.get('/api/analytics/daily/')
+      return response.data
+    },
+  })
+
+  const chartData = trends?.trends || []
 
   const metrics = [
     {
       id: 1,
-      title: "Spending Trend",
-      icon: forecast?.trend === 'increasing' ? TrendingUp : forecast?.trend === 'decreasing' ? TrendingDown : Activity,
-      value: forecast?.trend || 'Stable',
-      subtext: `Monthly change: ${formatCurrency(Math.abs(forecast?.monthly_change || 0))}`,
-      trend: forecast?.trend,
-      color: forecast?.trend === 'increasing' ? 'text-rose-600' : forecast?.trend === 'decreasing' ? 'text-emerald-600' : 'text-amber-600',
-      bgGradient: forecast?.trend === 'increasing' ? 'from-rose-400 to-pink-600' : forecast?.trend === 'decreasing' ? 'from-emerald-400 to-teal-600' : 'from-amber-400 to-orange-600',
-      bgColor: forecast?.trend === 'increasing' ? 'bg-rose-50' : forecast?.trend === 'decreasing' ? 'bg-emerald-50' : 'bg-amber-50',
+      title: "Current Month",
+      icon: Calendar,
+      value: formatCurrency(comparison?.current_month?.total || 0),
+      subtext: `${comparison?.current_month?.count || 0} transactions`,
+      trend: comparison?.change?.direction,
+      color: "text-indigo-600",
+      bgGradient: "from-indigo-400 to-purple-600",
+      bgColor: "bg-indigo-50",
     },
     {
       id: 2,
-      title: "Prediction Accuracy",
-      icon: Brain,
-      value: `${forecast?.model_accuracy?.toFixed(1) || 0}%`,
-      subtext: `Based on ${forecast?.historical_months || 0} months of data`,
-      color: "text-indigo-600",
-      bgGradient: "from-indigo-500 to-purple-600",
-      bgColor: "bg-indigo-50",
-      isAI: true,
+      title: "Monthly Average",
+      icon: BarChart3,
+      value: formatCurrency(trends?.average_monthly_spending || 0),
+      subtext: `Based on ${trends?.total_months || 0} months`,
+      color: "text-emerald-600",
+      bgGradient: "from-emerald-400 to-teal-600",
+      bgColor: "bg-emerald-50",
     },
     {
       id: 3,
-      title: "Unusual Transactions",
-      icon: AlertTriangle,
-      value: anomalies?.count || 0,
-      subtext: "Detected in the last 30 days",
-      color: "text-amber-600",
-      bgGradient: "from-amber-400 to-orange-600",
-      bgColor: "bg-amber-50",
+      title: "Top Category",
+      icon: PieChartIcon,
+      value: categories?.top_category?.category || 'N/A',
+      subtext: categories?.top_category ? formatCurrency(categories.top_category.amount) : 'No data',
+      color: "text-purple-600",
+      bgGradient: "from-purple-400 to-pink-600",
+      bgColor: "bg-purple-50",
+    },
+    {
+      id: 4,
+      title: "Spending Trend",
+      icon: trends?.trend_direction === 'increase' ? TrendingUp : trends?.trend_direction === 'decrease' ? TrendingDown : Activity,
+      value: trends?.trend_direction || 'Stable',
+      subtext: comparison?.change ? `${comparison.change.direction === 'increase' ? '+' : ''}${comparison.change.percentage}% vs last month` : 'No change',
+      trend: trends?.trend_direction,
+      color: trends?.trend_direction === 'increase' ? 'text-rose-600' : trends?.trend_direction === 'decrease' ? 'text-emerald-600' : 'text-amber-600',
+      bgGradient: trends?.trend_direction === 'increase' ? 'from-rose-400 to-pink-600' : trends?.trend_direction === 'decrease' ? 'from-emerald-400 to-teal-600' : 'from-amber-400 to-orange-600',
+      bgColor: trends?.trend_direction === 'increase' ? 'bg-rose-50' : trends?.trend_direction === 'decrease' ? 'bg-emerald-50' : 'bg-amber-50',
     }
   ]
 
   return (
-    <motion.div 
+    <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -172,19 +196,19 @@ export default function Analytics() {
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg"
           >
-            <Sparkles className="w-6 h-6 text-white" />
+            <BarChart3 className="w-6 h-6 text-white" />
           </motion.div>
           <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Analytics
           </h1>
         </div>
         <p className="text-slate-500 text-base md:text-lg max-w-2xl">
-          AI-powered insights and predictions for your finances
+          Insights and trends from your spending data
         </p>
       </motion.div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((metric, index) => (
           <motion.div
             key={metric.id}
@@ -196,9 +220,9 @@ export default function Analytics() {
           >
             <div className="relative bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-xl transition-all overflow-hidden">
               {/* Background glow */}
-              <motion.div 
+              <motion.div
                 className={`absolute -right-4 -top-4 w-32 h-32 bg-gradient-to-br ${metric.bgGradient} rounded-full opacity-10 blur-2xl`}
-                animate={{ 
+                animate={{
                   scale: hoveredCard === index ? 1.2 : 1,
                 }}
                 transition={{ duration: 0.5 }}
@@ -206,28 +230,17 @@ export default function Analytics() {
 
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-4">
-                  <motion.div 
+                  <motion.div
                     className={`p-3 rounded-xl ${metric.bgColor} shadow-sm`}
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.6 }}
                   >
                     <metric.icon className={`w-6 h-6 ${metric.color}`} />
                   </motion.div>
-                  
-                  {metric.isAI && (
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-200 font-medium"
-                    >
-                      <Zap className="w-3 h-3" />
-                      AI
-                    </motion.div>
-                  )}
                 </div>
 
                 <p className="text-slate-500 text-sm mb-1">{metric.title}</p>
-                <motion.h3 
+                <motion.h3
                   className={`text-2xl md:text-3xl font-bold ${metric.color} mb-2`}
                   key={metric.value}
                   initial={{ opacity: 0, y: 20 }}
@@ -239,16 +252,16 @@ export default function Analytics() {
                     metric.value.charAt(0).toUpperCase() + metric.value.slice(1)
                   )}
                 </motion.h3>
-                
+
                 <div className="flex items-center gap-2">
                   {metric.trend && (
                     <motion.div
                       initial={false}
-                      animate={{ 
-                        color: metric.trend === 'increasing' ? '#f43f5e' : '#10b981'
+                      animate={{
+                        color: metric.trend === 'increase' ? '#f43f5e' : '#10b981'
                       }}
                     >
-                      {metric.trend === 'increasing' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                      {metric.trend === 'increase' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                     </motion.div>
                   )}
                   <p className="text-sm text-slate-400">{metric.subtext}</p>
@@ -266,20 +279,16 @@ export default function Analytics() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-slate-800 mb-1 flex items-center gap-2">
-                <Target className="w-6 h-6 text-indigo-500" />
-                Spending Forecast
+                <Activity className="w-6 h-6 text-indigo-500" />
+                Monthly Spending Trends
               </h2>
-              <p className="text-slate-500">6-month AI prediction model</p>
+              <p className="text-slate-500">Last 6 months of spending</p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-indigo-500" />
-                <span className="text-sm text-slate-500">Historical</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-sm text-slate-500">Predicted</span>
+                <span className="text-sm text-slate-500">Spending</span>
               </div>
             </div>
           </div>
@@ -288,25 +297,21 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorSpending" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="#94a3b8" 
+                <XAxis
+                  dataKey="month"
+                  stroke="#94a3b8"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                 />
-                <YAxis 
-                  stroke="#94a3b8" 
+                <YAxis
+                  stroke="#94a3b8"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -319,17 +324,7 @@ export default function Analytics() {
                   name="spending"
                   stroke="#6366f1"
                   strokeWidth={3}
-                  fill="url(#colorActual)"
-                  animationDuration={2000}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="predicted"
-                  name="predicted"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  strokeDasharray="5 5"
-                  fill="url(#colorPredicted)"
+                  fill="url(#colorSpending)"
                   animationDuration={2000}
                 />
               </AreaChart>
@@ -338,159 +333,349 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      {/* Predictions Table */}
+      {/* Category Breakdown and Top Expenses Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Category Breakdown */}
+        <AnimatePresence>
+          {categories?.breakdown?.length > 0 && (
+            <motion.div
+              variants={itemVariants}
+              initial="hidden"
+              animate="show"
+              className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
+            >
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <PieChartIcon className="w-6 h-6 text-purple-500" />
+                Category Breakdown
+              </h2>
+
+              <div className="space-y-4">
+                {categories.breakdown.slice(0, 5).map((item: any, idx: number) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 5 }}
+                    className="relative group"
+                  >
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                          style={{ backgroundColor: `${item.color}20` }}
+                        >
+                          {item.icon}
+                        </div>
+                        <div>
+                          <p className="text-slate-800 font-semibold">{item.category}</p>
+                          <p className="text-slate-500 text-sm">{item.count} transactions</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-slate-900 font-bold text-lg">{formatCurrency(item.amount)}</p>
+                        <p className="text-slate-500 text-sm">{item.percentage}%</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Top Expenses */}
+        <AnimatePresence>
+          {topExpenses?.expenses?.length > 0 && (
+            <motion.div
+              variants={itemVariants}
+              initial="hidden"
+              animate="show"
+              className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
+            >
+              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <Receipt className="w-6 h-6 text-rose-500" />
+                Top Expenses
+              </h2>
+
+              <div className="space-y-4">
+                {topExpenses.expenses.map((expense: any, idx: number) => (
+                  <motion.div
+                    key={expense.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.1 }}
+                    whileHover={{ scale: 1.02, x: 5 }}
+                    className="relative group"
+                  >
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <span className="text-xl">{expense.category_icon}</span>
+                        </div>
+                        <div>
+                          <p className="text-slate-800 font-semibold">{expense.description}</p>
+                          <p className="text-slate-500 text-sm">
+                            {expense.merchant} • {expense.date_display}
+                          </p>
+                        </div>
+                      </div>
+                      <motion.p
+                        className="text-xl font-bold text-slate-800"
+                        whileHover={{ scale: 1.1, color: '#f43f5e' }}
+                      >
+                        {formatCurrency(expense.amount)}
+                      </motion.p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Month Comparison */}
       <AnimatePresence>
-        {forecast?.predictions?.length > 0 && (
-          <motion.div 
+        {comparison && (
+          <motion.div
             variants={itemVariants}
             initial="hidden"
             animate="show"
             className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
           >
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Brain className="w-6 h-6 text-indigo-500" />
-              Predicted Monthly Spending
+              <DollarSign className="w-6 h-6 text-indigo-500" />
+              Month-over-Month Comparison
             </h2>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left border-b border-slate-100">
-                    <th className="pb-4 text-slate-400 font-medium text-sm">Month</th>
-                    <th className="pb-4 text-slate-400 font-medium text-sm">Predicted</th>
-                    <th className="pb-4 text-slate-400 font-medium text-sm">Range</th>
-                    <th className="pb-4 text-slate-400 font-medium text-sm">Confidence</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {forecast.predictions.map((pred: any, idx: number) => (
-                    <motion.tr 
-                      key={pred.month}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                      whileHover={{ backgroundColor: 'rgba(99,102,241,0.03)' }}
-                      className="group cursor-pointer"
-                    >
-                      <td className="py-4 text-slate-800 font-medium">{pred.month}</td>
-                      <td className="py-4 text-emerald-600 font-bold text-lg">
-                        {formatCurrency(pred.predicted_spending)}
-                      </td>
-                      <td className="py-4 text-slate-500 text-sm">
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200">
-                          {formatCurrency(pred.lower_bound)} - {formatCurrency(pred.upper_bound)}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden max-w-[100px]">
-                            <motion.div 
-                              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pred.confidence}%` }}
-                              transition={{ duration: 1, delay: 0.5 }}
-                            />
-                          </div>
-                          <span className="text-indigo-600 font-medium">{pred.confidence}%</span>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 bg-indigo-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">{comparison.current_month?.month}</p>
+                <p className="text-3xl font-bold text-indigo-600 mb-1">
+                  {formatCurrency(comparison.current_month?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{comparison.current_month?.count} transactions</p>
+              </div>
+
+              <div className="p-6 bg-slate-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">{comparison.previous_month?.month}</p>
+                <p className="text-3xl font-bold text-slate-600 mb-1">
+                  {formatCurrency(comparison.previous_month?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{comparison.previous_month?.count} transactions</p>
+              </div>
+
+              <div className={`p-6 rounded-2xl ${comparison.change?.direction === 'increase' ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+                <p className="text-slate-500 text-sm mb-2">Change</p>
+                <div className="flex items-center gap-2 mb-1">
+                  {comparison.change?.direction === 'increase' ? (
+                    <ArrowUpRight className="w-6 h-6 text-rose-600" />
+                  ) : (
+                    <ArrowDownRight className="w-6 h-6 text-emerald-600" />
+                  )}
+                  <p className={`text-3xl font-bold ${comparison.change?.direction === 'increase' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {comparison.change?.percentage}%
+                  </p>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  {comparison.change?.direction === 'increase' ? '+' : ''}{formatCurrency(Math.abs(comparison.change?.amount || 0))}
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Anomalies */}
+      {/* Weekly Analytics */}
       <AnimatePresence>
-        {anomalies?.anomalies?.length > 0 && (
-          <motion.div variants={itemVariants}>
+        {weekly && (
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+            className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
+          >
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-amber-500" />
-              Unusual Transactions
+              <Calendar className="w-6 h-6 text-purple-500" />
+              Weekly Spending (Last 7 Days)
             </h2>
-            <div className="grid gap-4">
-              {anomalies.anomalies.map((anomaly: any, idx: number) => (
-                <motion.div
-                  key={anomaly.transaction_id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.1 }}
-                  whileHover={{ scale: 1.01, x: 5 }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative flex items-center justify-between p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-                    <div className="flex items-start gap-4">
-                      <motion.div 
-                        className="p-3 bg-white rounded-xl shadow-sm"
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 4, repeat: Infinity }}
-                      >
-                        <AlertTriangle className="w-6 h-6 text-amber-500" />
-                      </motion.div>
-                      <div>
-                        <p className="text-slate-800 font-semibold text-lg mb-1">{anomaly.description}</p>
-                        <p className="text-slate-500 text-sm">
-                          {anomaly.merchant || anomaly.category} • {anomaly.date}
-                        </p>
-                        <motion.p 
-                          className="text-xs text-amber-600 mt-2 flex items-center gap-1 font-medium"
-                          animate={{ opacity: [0.5, 1, 0.5] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        >
-                          <Zap className="w-3 h-3" />
-                          {anomaly.reason}
-                        </motion.p>
-                      </div>
-                    </div>
-                    <motion.p 
-                      className="text-2xl font-bold text-slate-800"
-                      whileHover={{ scale: 1.1, color: '#f43f5e' }}
-                    >
-                      {formatCurrency(anomaly.amount)}
-                    </motion.p>
-                  </div>
-                </motion.div>
-              ))}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-6 bg-purple-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">This Week</p>
+                <p className="text-3xl font-bold text-purple-600 mb-1">
+                  {formatCurrency(weekly.current_week?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{weekly.current_week?.count} transactions</p>
+              </div>
+
+              <div className="p-6 bg-slate-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">Previous Week</p>
+                <p className="text-3xl font-bold text-slate-600 mb-1">
+                  {formatCurrency(weekly.previous_week?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{weekly.previous_week?.count} transactions</p>
+              </div>
+
+              <div className={`p-6 rounded-2xl ${weekly.change?.direction === 'increase' ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+                <p className="text-slate-500 text-sm mb-2">Change</p>
+                <div className="flex items-center gap-2 mb-1">
+                  {weekly.change?.direction === 'increase' ? (
+                    <ArrowUpRight className="w-6 h-6 text-rose-600" />
+                  ) : (
+                    <ArrowDownRight className="w-6 h-6 text-emerald-600" />
+                  )}
+                  <p className={`text-3xl font-bold ${weekly.change?.direction === 'increase' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {weekly.change?.percentage}%
+                  </p>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  {weekly.change?.direction === 'increase' ? '+' : ''}{formatCurrency(Math.abs(weekly.change?.amount || 0))}
+                </p>
+              </div>
+            </div>
+
+            {/* Daily breakdown chart */}
+            {weekly.daily_breakdown && weekly.daily_breakdown.length > 0 && (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weekly.daily_breakdown} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis
+                      dataKey="day"
+                      stroke="#94a3b8"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#94a3b8"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₹${value}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      dataKey="spending"
+                      fill="#a855f7"
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={1000}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Daily Analytics */}
+      <AnimatePresence>
+        {daily && (
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+            className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
+          >
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <Activity className="w-6 h-6 text-blue-500" />
+              Daily Spending
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="p-6 bg-blue-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">Today</p>
+                <p className="text-3xl font-bold text-blue-600 mb-1">
+                  {formatCurrency(daily.today?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{daily.today?.count} transactions</p>
+              </div>
+
+              <div className="p-6 bg-slate-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">Yesterday</p>
+                <p className="text-3xl font-bold text-slate-600 mb-1">
+                  {formatCurrency(daily.yesterday?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{daily.yesterday?.count} transactions</p>
+              </div>
+
+              <div className="p-6 bg-indigo-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">Daily Average</p>
+                <p className="text-3xl font-bold text-indigo-600 mb-1">
+                  {formatCurrency(daily.monthly_daily_average || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">This month</p>
+              </div>
+
+              <div className={`p-6 rounded-2xl ${daily.change?.direction === 'increase' ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+                <p className="text-slate-500 text-sm mb-2">Change</p>
+                <div className="flex items-center gap-2 mb-1">
+                  {daily.change?.direction === 'increase' ? (
+                    <ArrowUpRight className="w-6 h-6 text-rose-600" />
+                  ) : (
+                    <ArrowDownRight className="w-6 h-6 text-emerald-600" />
+                  )}
+                  <p className={`text-3xl font-bold ${daily.change?.direction === 'increase' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {daily.change?.percentage}%
+                  </p>
+                </div>
+                <p className="text-slate-500 text-sm">vs yesterday</p>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* AI Insights */}
+      {/* Original Month Comparison - keeping for reference */}
       <AnimatePresence>
-        {insights?.recommendations?.length > 0 && (
-          <motion.div variants={itemVariants}>
+        {comparison && (
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+            className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg"
+          >
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-purple-500" />
-              AI Insights
+              <DollarSign className="w-6 h-6 text-indigo-500" />
+              Month-over-Month Comparison
             </h2>
-            <div className="grid gap-4">
-              {insights.recommendations.map((rec: string, i: number) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.15 }}
-                  whileHover={{ scale: 1.02, x: 5 }}
-                  className="relative group cursor-pointer"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                  <div className="relative p-6 bg-white border border-indigo-100 rounded-2xl shadow-sm flex items-start gap-4">
-                    <div className="mt-1">
-                      <motion.div
-                        className="w-2 h-2 rounded-full bg-indigo-500"
-                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
-                      />
-                    </div>
-                    <p className="text-slate-700 text-lg leading-relaxed font-medium">{rec}</p>
-                  </div>
-                </motion.div>
-              ))}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 bg-indigo-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">{comparison.current_month?.month}</p>
+                <p className="text-3xl font-bold text-indigo-600 mb-1">
+                  {formatCurrency(comparison.current_month?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{comparison.current_month?.count} transactions</p>
+              </div>
+
+              <div className="p-6 bg-slate-50 rounded-2xl">
+                <p className="text-slate-500 text-sm mb-2">{comparison.previous_month?.month}</p>
+                <p className="text-3xl font-bold text-slate-600 mb-1">
+                  {formatCurrency(comparison.previous_month?.total || 0)}
+                </p>
+                <p className="text-slate-500 text-sm">{comparison.previous_month?.count} transactions</p>
+              </div>
+
+              <div className={`p-6 rounded-2xl ${comparison.change?.direction === 'increase' ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+                <p className="text-slate-500 text-sm mb-2">Change</p>
+                <div className="flex items-center gap-2 mb-1">
+                  {comparison.change?.direction === 'increase' ? (
+                    <ArrowUpRight className="w-6 h-6 text-rose-600" />
+                  ) : (
+                    <ArrowDownRight className="w-6 h-6 text-emerald-600" />
+                  )}
+                  <p className={`text-3xl font-bold ${comparison.change?.direction === 'increase' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {comparison.change?.percentage}%
+                  </p>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  {comparison.change?.direction === 'increase' ? '+' : ''}{formatCurrency(Math.abs(comparison.change?.amount || 0))}
+                </p>
+              </div>
             </div>
           </motion.div>
         )}

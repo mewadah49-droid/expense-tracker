@@ -4,14 +4,21 @@ URL configuration for analytics app.
 
 from django.urls import path
 from .views import (
-    SpendingForecastView, CategoryForecastView,
-    AnomalyDetectionView, SpendingInsightsView, DashboardStatsView
+    DashboardStatsView,
+    MonthlyTrendsView,
+    CategoryBreakdownView,
+    TopExpensesView,
+    SpendingComparisonView,
+    WeeklyAnalyticsView,
+    DailyAnalyticsView
 )
 
 urlpatterns = [
     path('dashboard/', DashboardStatsView.as_view(), name='dashboard-stats'),
-    path('forecast/', SpendingForecastView.as_view(), name='spending-forecast'),
-    path('forecast/category/<int:category_id>/', CategoryForecastView.as_view(), name='category-forecast'),
-    path('anomalies/', AnomalyDetectionView.as_view(), name='anomaly-detection'),
-    path('insights/', SpendingInsightsView.as_view(), name='spending-insights'),
+    path('trends/', MonthlyTrendsView.as_view(), name='monthly-trends'),
+    path('categories/', CategoryBreakdownView.as_view(), name='category-breakdown'),
+    path('top-expenses/', TopExpensesView.as_view(), name='top-expenses'),
+    path('comparison/', SpendingComparisonView.as_view(), name='spending-comparison'),
+    path('weekly/', WeeklyAnalyticsView.as_view(), name='weekly-analytics'),
+    path('daily/', DailyAnalyticsView.as_view(), name='daily-analytics'),
 ]

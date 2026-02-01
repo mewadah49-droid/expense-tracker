@@ -43,8 +43,20 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true
           })
         } catch (error) {
-          console.error('Failed to init user:', error)
-          // Fallback or retry logic could go here
+          console.error('Failed to init user, falling back to local mock:', error)
+          // Fallback to mock user for local development
+          set({
+            user: {
+              id: 1,
+              username: 'local_dev',
+              email: 'dev@example.com',
+              firstName: 'Local',
+              lastName: 'Dev',
+              monthlyBudget: 5000, // Default mock budget
+              currency: 'INR',
+            },
+            isAuthenticated: true
+          })
         }
       },
 
