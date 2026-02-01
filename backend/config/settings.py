@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.transactions',
     'apps.receipts',
     'apps.analytics',
+    'apps.tasks',
 ]
 
 MIDDLEWARE = [

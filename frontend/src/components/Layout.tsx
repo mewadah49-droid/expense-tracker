@@ -6,7 +6,7 @@ import {
   CreditCard,
   BarChart3,
   Settings,
-  Scan,
+  ListTodo,
   Upload,
   Menu,
   X,
@@ -16,7 +16,7 @@ import { useState, useEffect } from 'react'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Transactions', href: '/transactions', icon: CreditCard },
-  { name: 'Receipts', href: '/receipts', icon: Scan },
+  { name: 'Todo List', href: '/todo', icon: ListTodo },
   { name: 'Import', href: '/import', icon: Upload },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
@@ -70,7 +70,7 @@ export default function Layout() {
               ExpenseAI
             </span>
           </div>
-          
+
           {/* Close Button - Mobile Only */}
           <button
             onClick={() => setMobileMenuOpen(false)}
@@ -84,7 +84,7 @@ export default function Layout() {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href
-            
+
             return (
               <NavLink
                 key={item.name}
@@ -92,8 +92,8 @@ export default function Layout() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                  isActive 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25" 
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
                     : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
                 )}
               >
