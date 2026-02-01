@@ -14,92 +14,45 @@ interface User {
 
 interface AuthState {
   user: User | null
-  accessToken: string | null
-  refreshToken: string | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (data: RegisterData) => Promise<void>
-  logout: () => void
+  init: () => Promise<void>
   updateUser: (user: Partial<User>) => void
-}
-
-interface RegisterData {
-  username: string
-  email: string
-  password: string
-  passwordConfirm: string
-  firstName?: string
-  lastName?: string
+  logout: () => void // Keep for interface compatibility if used elsewhere, but effectively resets
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user: {
-        id: 1,
-        username: 'demo',
-        email: 'demo@example.com',
-        firstName: 'Demo',
-        lastName: 'User',
-        monthlyBudget: 5000,
-        currency: 'USD'
+      user: null,
+      isAuthenticated: true, // Always authenticated in Single User Mode
+
+      init: async () => {
+        try {
+          // Fetch the default user from backend
+          const response = await api.get('/api/users/profile/')
+          set({
+            user: {
+              id: response.data.id,
+              username: response.data.username,
+              email: response.data.email,
+              firstName: response.data.first_name,
+              lastName: response.data.last_name,
+              monthlyBudget: response.data.monthly_budget,
+              currency: response.data.currency,
+            },
+            isAuthenticated: true
+          })
+        } catch (error) {
+          console.error('Failed to init user:', error)
+          // Fallback or retry logic could go here
+        }
       },
-      accessToken: 'demo-token',
-      refreshToken: 'demo-refresh',
-      isAuthenticated: true,
-      
-      login: async (email: string, password: string) => {
-        const response = await api.post('/api/auth/token/', {
-          username: email,
-          password,
-        })
-        
-        const { access, refresh } = response.data
-        
-        // Fetch user profile
-        api.defaults.headers.common['Authorization'] = `Bearer ${access}`
-        const profileResponse = await api.get('/api/users/profile/')
-        
-        set({
-          accessToken: access,
-          refreshToken: refresh,
-          user: {
-            id: profileResponse.data.id,
-            username: profileResponse.data.username,
-            email: profileResponse.data.email,
-            firstName: profileResponse.data.first_name,
-            lastName: profileResponse.data.last_name,
-            monthlyBudget: profileResponse.data.monthly_budget,
-            currency: profileResponse.data.currency,
-          },
-          isAuthenticated: true,
-        })
-      },
-      
-      register: async (data: RegisterData) => {
-        await api.post('/api/users/register/', {
-          username: data.username,
-          email: data.email,
-          password: data.password,
-          password_confirm: data.passwordConfirm,
-          first_name: data.firstName,
-          last_name: data.lastName,
-        })
-        
-        // Auto-login after registration
-        await get().login(data.email, data.password)
-      },
-      
+
       logout: () => {
-        delete api.defaults.headers.common['Authorization']
-        set({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false,
-        })
+        // No-op or reset
+        set({ user: null })
       },
-      
+
       updateUser: (userData: Partial<User>) => {
         const currentUser = get().user
         if (currentUser) {
@@ -110,8 +63,6 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),

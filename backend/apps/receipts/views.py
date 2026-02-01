@@ -32,7 +32,14 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Upload and process receipt."""
-        receipt = serializer.save()
+        # Single User Mode: Assign to default user
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.first()
+        if not user:
+             user = User.objects.create_user(username='user', email='user@example.com', password='password')
+        
+        receipt = serializer.save(user=user)
         
         # Process receipt with OCR
         self._process_receipt(receipt)
